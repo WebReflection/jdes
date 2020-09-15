@@ -137,7 +137,8 @@ export const define = (types, def) => {
   if (!isUnion && !isEnum && !isStruct && (!def.check || !def.cast))
     throw new Error(`unable to define ${types} without check and cast`);
   for (const type of [].concat(types)) {
-    if (JdeS.has(type) || (type in G) || (type in OProto))
+    const isVoid = /^(?:void|undefined)$/.test(type);
+    if (JdeS.has(type) || (type in OProto) || (type in G && !isVoid))
       throw new TypeError(`${asType(type)} already defined`);
     const _ = isUnion || isEnum ?
       def(type) :
@@ -153,10 +154,9 @@ export const define = (types, def) => {
         }
       } : assign({}, def));
     const array = isEnum ? G[type].toString() : Symbol(type);
-    if (!isEnum)
+    if (!isEnum && !isVoid)
       defineProperty(G, type, {configurable: true, value: array});
     JdeS.set(type, _);
-    JdeS.set(array, _);
     defineProperty(OProto, type, {
       configurable: true,
       get() {
@@ -165,21 +165,24 @@ export const define = (types, def) => {
         return isStruct ? _.cast(this) : this;
       }
     });
-    defineProperty(OProto, array, {
-      configurable: true,
-      get() {
-        if (SAFE && !_.check(this, true))
-          invalidType(array, this);
-        if (typed.has(type))
-          return _.cast(this);
-        if (SAFE && !isArray(this))
-          invalidType(array, this);
-        if (SAFE && proxies.has(this))
-          return this;
-        const result = isStruct ? map.call(this, _.cast, _) : this;
-        return proxyArray(patchArray(result, array, _), type, _);
-      }
-    });
+    if (!isVoid) {
+      JdeS.set(array, _);
+      defineProperty(OProto, array, {
+        configurable: true,
+        get() {
+          if (SAFE && !_.check(this, true))
+            invalidType(array, this);
+          if (typed.has(type))
+            return _.cast(this);
+          if (SAFE && !isArray(this))
+            invalidType(array, this);
+          if (SAFE && proxies.has(this))
+            return this;
+          const result = isStruct ? map.call(this, _.cast, _) : this;
+          return proxyArray(patchArray(result, array, _), type, _);
+        }
+      });
+    }
   }
 };
 
@@ -364,7 +367,8 @@ define('float', {
   [f => {
     const [type] = ownKeys(f);
     return fn({[type]: Function.apply(null, [].concat(f[type]))});
-  }, 'function', 'fn']
+  }, 'function', 'fn'],
+  [() => void 0, 'undefined', 'void']
 ].forEach(([transform, real, ...fake]) => {
   const is = value => typeof value === real;
   const check = (value, asArray) => asArray ? every.call(value, is) : is(value);

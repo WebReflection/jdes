@@ -48,6 +48,7 @@ function test(unsafe) {
   assert(as({[f32]: new Float32Array([])}), 'unexpected as(f32) result');
 
   // Primitives
+  assert(as({void: 123}) === void 0, 'unexpected void cast');
   const {i32_f32: i_f} = 0;
   const {[i32_f32]: ii_ff} = [i_f, 0];
   assert(typeof i_f === 'number', 'unexpected union type');
@@ -83,6 +84,8 @@ function test(unsafe) {
   assert(squared(3) === 9, 'unexpected function result');
   const eval = as({fn: {int: ['{int: i}', 'return i * i;']}});
   assert(eval(3) === 9, 'unexpected function result');
+  const nothing = fn({void() {}});
+  assert(nothing() === void 0, 'unexpected non void return');
 
   // Struct
   const {Point3D: p3d} = {x: 1, y: 2};
