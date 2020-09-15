@@ -1,6 +1,6 @@
 {
   "name": "jdes",
-  "version": "0.1.3",
+  "version": "0.1.4",
   "description": "",
   "main": "./cjs/index.js",
   "scripts": {
