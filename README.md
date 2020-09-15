@@ -1,6 +1,6 @@
 # Destructured JS
 
-[![Build Status](https://travis-ci.com/WebReflection/qui-gon.svg?branch=master)](https://travis-ci.com/WebReflection/qui-gon) [![Coverage Status](https://coveralls.io/repos/github/WebReflection/qui-gon/badge.svg?branch=master)](https://coveralls.io/github/WebReflection/qui-gon?branch=master)
+[![Build Status](https://travis-ci.com/WebReflection/jdes.svg?branch=master)](https://travis-ci.com/WebReflection/jdes) [![Coverage Status](https://coveralls.io/repos/github/WebReflection/jdes/badge.svg?branch=master)](https://coveralls.io/github/WebReflection/jdes?branch=master)
 
 A type safe JS runtime.
 
