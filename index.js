@@ -189,8 +189,11 @@ self.deejs = (function (exports) {
    * PERFORMANCE OF THIS SOFTWARE.
    */
   var SAFE = true;
+  var REBACK = /^[^(]*\(\s*([^\2]*?)(\s*\)\s*(?:=>)?\s*\{)([\s\S]*?)\}$/;
+  var RESYMBOL = /^Symbol\(([\s\S]+)\)$/;
   var isArray = Array.isArray,
       AProto = Array.prototype;
+  var parse = JSON.parse;
   var assign = Object.assign,
       create = Object.create,
       defineProperty = Object.defineProperty,
@@ -220,7 +223,7 @@ self.deejs = (function (exports) {
   };
 
   var asType = function asType(type) {
-    return String(type).replace(/^Symbol\(([\s\S]+)\)$/, '[$1]');
+    return String(type).replace(RESYMBOL, '[$1]');
   };
 
   var inspect = function inspect(object) {
@@ -464,11 +467,21 @@ self.deejs = (function (exports) {
         type = _ownKeys4[0];
 
     var callback = definition[type];
-    return function () {
+    defineProperty(fn, 'toJSON', {
+      value: function value() {
+        var cb = String(callback);
+        var args = cb.replace(REBACK, '$1');
+        var body = cb.replace(REBACK, '$3');
+        return _defineProperty({}, "\xFF".concat(String(type)), [args.trim(), body.trim()]);
+      }
+    });
+    return fn;
+
+    function fn() {
       var result = callback.apply(this, arguments);
       if (SAFE && !is(_defineProperty({}, type, result))) invalidType(type, result);
       return result;
-    };
+    }
   };
   var struct = function struct() {
     var Struct = function Struct(definition) {
@@ -591,7 +604,35 @@ self.deejs = (function (exports) {
   };
   var unsafe = function unsafe() {
     SAFE = false;
-  }; // NUMERIC TYPES
+  }; // JSON Functions
+
+  defineProperty(JSON, 'parse', {
+    value: function value(text) {
+      var reviver = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : function (_, v) {
+        return v;
+      };
+      return parse.call(JSON, text, function (k, v) {
+        if (_typeof(v) === 'object' && v) {
+          var keys = ownKeys(v);
+
+          if (keys.length === 1) {
+            var _keys = _slicedToArray(keys, 1),
+                type = _keys[0];
+
+            if (type[0] === '\xff' && isArray(v[type])) {
+              type = type.slice(1);
+              if (/^Symbol\((.+?)\)$/.test(type)) type = G[RegExp.$1];
+              v = as({
+                fn: _defineProperty({}, type, v[keys])
+              });
+            }
+          }
+        }
+
+        return reviver.call(this, k, v);
+      });
+    }
+  }); // NUMERIC TYPES
 
   [{
     f32: 'Float32Array'
@@ -673,11 +714,11 @@ self.deejs = (function (exports) {
     return fn(_defineProperty({}, type, Function.apply(null, [].concat(f[type]))));
   }, 'function', 'fn'], [function () {
     return void 0;
-  }, 'undefined', 'void']].forEach(function (_ref) {
-    var _ref2 = _toArray(_ref),
-        transform = _ref2[0],
-        real = _ref2[1],
-        fake = _ref2.slice(2);
+  }, 'undefined', 'void']].forEach(function (_ref2) {
+    var _ref3 = _toArray(_ref2),
+        transform = _ref3[0],
+        real = _ref3[1],
+        fake = _ref3.slice(2);
 
     var is = function is(value) {
       return _typeof(value) === real;

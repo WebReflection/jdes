@@ -17,8 +17,11 @@
  */
 
 let SAFE = true;
+const REBACK = /^[^(]*\(\s*([^\2]*?)(\s*\)\s*(?:=>)?\s*\{)([\s\S]*?)\}$/;
+const RESYMBOL = /^Symbol\(([\s\S]+)\)$/;
 
 const {isArray, prototype: AProto} = Array;
+const {parse} = JSON;
 const {assign, create, defineProperty, freeze, is: same, prototype: OProto} = Object;
 const {getPrototypeOf, ownKeys} = Reflect;
 
@@ -36,7 +39,7 @@ const structs = new Set;
 const proxies = new WeakSet;
 
 const asString = value => String(value).toString();
-const asType = type => String(type).replace(/^Symbol\(([\s\S]+)\)$/, '[$1]');
+const asType = type => String(type).replace(RESYMBOL, '[$1]');
 
 const inspect = object => {
   const [type] = ownKeys(object);
@@ -219,12 +222,19 @@ export const enums = (...properties) => {
 export const fn = definition => {
   const [type] = ownKeys(definition);
   const callback = definition[type];
-  return function () {
+  defineProperty(fn, 'toJSON', {value() {
+    const cb = String(callback);
+    const args = cb.replace(REBACK, '$1');
+    const body = cb.replace(REBACK, '$3');
+    return {[`\xff${String(type)}`]: [args.trim(), body.trim()]};
+  }});
+  return fn;
+  function fn() {
     const result = callback.apply(this, arguments);
     if (SAFE && !is({[type]: result}))
       invalidType(type, result);
     return result;
-  };
+  }
 };
 
 export const struct = (...definition) => {
@@ -301,6 +311,26 @@ export const union = type => {
 export const unsafe = () => {
   SAFE = false;
 };
+
+
+// JSON Functions
+defineProperty(JSON, 'parse', {value(text, reviver = (_, v) => v) {
+  return parse.call(JSON, text, function (k, v) {
+    if (typeof v === 'object' && v) {
+      const keys = ownKeys(v);
+      if (keys.length === 1) {
+        let [type] = keys;
+        if (type[0] === '\xff' && isArray(v[type])) {
+          type = type.slice(1);
+          if (/^Symbol\((.+?)\)$/.test(type))
+            type = G[RegExp.$1];
+          v = as({fn: {[type]: v[keys]}});
+        }
+      }
+    }
+    return reviver.call(this, k, v);
+  });
+}});
 
 
 

@@ -84,8 +84,15 @@ function test(unsafe) {
   assert(squared(3) === 9, 'unexpected function result');
   const eval = as({fn: {int: ['{int: i}', 'return i * i;']}});
   assert(eval(3) === 9, 'unexpected function result');
+  let stringified = JSON.stringify(eval);
+  assert(stringified === '{"ÿint":["{int: i}","return i * i;"]}', 'unexpected JSON outcome');
+  assert(JSON.parse(stringified)(3) === 9, 'unexpected parse result');
   const nothing = fn({void() {}});
   assert(nothing() === void 0, 'unexpected non void return');
+  stringified = JSON.stringify(as({fn: {[int]: ['{int: i}', 'return [i * i];']}}));
+  assert(stringified === '{"ÿSymbol(int)":["{int: i}","return [i * i];"]}', 'unexpected JSON outcome');
+  assert(Array.isArray(JSON.parse(stringified)(3)), 'unexpected parse result with array returned');
+  assert(JSON.parse('{"ÿint":null}')["ÿint"] === null, 'unexpected parse result');
 
   // Struct
   const {Point3D: p3d} = {x: 1, y: 2};
