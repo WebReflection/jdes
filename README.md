@@ -20,18 +20,18 @@ const squared = fn({int: ({int_float: num}) => num * num});
 squared(3); // 9
 
 // enums
-define('RGB', enums(['RED', 'GREEN', 'BLUE']));
+define('RGB', enums('RED', 'GREEN', 'BLUE'));
 const {RGB: color} = RGB.GREEN;
 
 // struct
-define('Point3D', struct([
+define('Point3D', struct(
   {int: ['x', 'y']},  // mandatory properties
   {int: {z: 0}},      // default properties
   // methods {returnType: {methodName({argType: name}, ...) {}}}
   {[int]: {coords() {
     return [this.x, this.y, this.z];
   }}}
-]));
+));
 const {Point3D: p3d} = {x: 1, y: 2};
 p3d.coords();       // [1, 2, 0]
 is({Point3D: p3d}); // true
