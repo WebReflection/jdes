@@ -1,0 +1,42 @@
+#!/usr/bin/env node
+
+let TARGET = '';
+
+for (let {argv} = process, i = 2, {length} = argv; i < length; i++) {
+  if (/^--/.test(argv[i])) {
+    const equal = argv[i].indexOf('=');
+    const key = equal < 0 ? argv[i] : argv[i].slice(0, equal);
+    const value = equal < 0 ? argv[++i] : argv[i].slice(equal + 1);
+    switch (key) {
+      case '--target':
+        if (!value) {
+          console.error(`unable to define ${key} value`);
+          process.exit(1);
+        }
+        TARGET = value.toLowerCase();
+        break;
+    }
+  }
+}
+
+const parse = {
+  js: require('./js'),
+};
+
+if (!parse.hasOwnProperty(TARGET)) {
+  console.error(`unknown target ${TARGET}`);
+  process.exit(1);
+}
+
+console.log(parse[TARGET](`
+define('int_float', union);
+define(['RGB'], enums(
+  {RED: 0},
+  'GREEN',
+  'BLUE'
+));
+const {[i32]: i} = [0];
+const {float: f} = as({float: i});
+if (is({float: f}))
+  console.log('OK');
+`));

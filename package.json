@@ -1,7 +1,8 @@
 {
   "name": "jdes",
   "version": "0.1.4",
-  "description": "",
+  "description": "A type safe JS runtime",
+  "bin": "./bin/d.js",
   "main": "./cjs/index.js",
   "scripts": {
     "build": "npm run cjs && npm run rollup:es && npm run rollup:babel && npm run min && npm run test",
@@ -12,7 +13,7 @@
     "coveralls": "nyc report --reporter=text-lcov | coveralls",
     "test": "nyc node test/index.js"
   },
-  "keywords": [],
+  "keywords": ["type", "safe", "JS", "runtime"],
   "author": "Andrea Giammarchi",
   "license": "ISC",
   "devDependencies": {
