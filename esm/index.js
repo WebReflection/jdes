@@ -38,6 +38,8 @@ const structs = new Set;
 
 const proxies = new WeakSet;
 
+const defaultArg = new Proxy({}, {get: () => void 0});
+
 const asString = value => String(value).toString();
 const asType = type => String(type).replace(RESYMBOL, '[$1]');
 
@@ -222,6 +224,7 @@ export const enums = (...properties) => {
 export const fn = definition => {
   const [type] = ownKeys(definition);
   const callback = definition[type];
+  const {length} = callback;
   defineProperty(fn, 'toJSON', {value() {
     const cb = String(callback);
     const args = cb.replace(REBACK, '$1');
@@ -229,8 +232,12 @@ export const fn = definition => {
     return {[`\xff${String(type)}`]: [args.trim(), body.trim()]};
   }});
   return fn;
-  function fn() {
-    const result = callback.apply(this, arguments);
+  function fn(...args) {
+    for (let i = 0, {length: len} = args; i < length; i++) {
+      if (len <= i)
+        args[i] = defaultArg;
+    }
+    const result = callback.apply(this, args);
     if (SAFE && !is({[type]: result}))
       invalidType(type, result);
     return result;

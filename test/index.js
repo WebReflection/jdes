@@ -80,8 +80,8 @@ function test(unsafe) {
   assert(s === 123, 'unexpected int cast');
 
   // Functions
-  const squared = fn({int: ({int: i}) => i * i});
-  assert(squared(3) === 9, 'unexpected function result');
+  const squared = fn({int: ({int: i = 3}) => i * i});
+  assert(squared() === 9, 'unexpected function result');
   const eval = as({fn: {int: ['{int: i}', 'return i * i;']}});
   assert(eval(3) === 9, 'unexpected function result');
   let stringified = JSON.stringify(eval);

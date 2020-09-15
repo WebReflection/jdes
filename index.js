@@ -217,6 +217,11 @@ self.deejs = (function (exports) {
   var enumerable = new Set();
   var structs = new Set();
   var proxies = new WeakSet();
+  var defaultArg = new Proxy({}, {
+    get: function get() {
+      return void 0;
+    }
+  });
 
   var asString = function asString(value) {
     return String(value).toString();
@@ -467,6 +472,7 @@ self.deejs = (function (exports) {
         type = _ownKeys4[0];
 
     var callback = definition[type];
+    var length = callback.length;
     defineProperty(fn, 'toJSON', {
       value: function value() {
         var cb = String(callback);
@@ -478,7 +484,15 @@ self.deejs = (function (exports) {
     return fn;
 
     function fn() {
-      var result = callback.apply(this, arguments);
+      for (var _len5 = arguments.length, args = new Array(_len5), _key5 = 0; _key5 < _len5; _key5++) {
+        args[_key5] = arguments[_key5];
+      }
+
+      for (var i = 0, len = args.length; i < length; i++) {
+        if (len <= i) args[i] = defaultArg;
+      }
+
+      var result = callback.apply(this, args);
       if (SAFE && !is(_defineProperty({}, type, result))) invalidType(type, result);
       return result;
     }
@@ -507,8 +521,8 @@ self.deejs = (function (exports) {
 
         try {
           for (_iterator4.s(); !(_step4 = _iterator4.n()).done;) {
-            var _key5 = _step4.value;
-            if (_key5 in definition) this[_key5] = definition[_key5];
+            var _key6 = _step4.value;
+            if (_key6 in definition) this[_key6] = definition[_key6];
           }
         } catch (err) {
           _iterator4.e(err);
@@ -516,8 +530,8 @@ self.deejs = (function (exports) {
           _iterator4.f();
         }
       } else {
-        for (var _key6 in definition) {
-          this[_key6] = definition[_key6];
+        for (var _key7 in definition) {
+          this[_key7] = definition[_key7];
         }
       }
 
@@ -551,15 +565,15 @@ self.deejs = (function (exports) {
       } else {
         var _ownKeys5 = ownKeys(value),
             _ownKeys6 = _slicedToArray(_ownKeys5, 1),
-            _key7 = _ownKeys6[0];
+            _key8 = _ownKeys6[0];
 
-        var shared = value[_key7];
-        if (typeof shared === 'function') defineProperty(prototype, _key7, {
+        var shared = value[_key8];
+        if (typeof shared === 'function') defineProperty(prototype, _key8, {
           value: fn(_defineProperty({}, type, shared))
         });else {
           if (SAFE && !is(_defineProperty({}, type, shared))) invalidType(type, shared);
-          arbitrary.push(_key7);
-          protoAccessor(prototype, _key7, type, shared);
+          arbitrary.push(_key8);
+          protoAccessor(prototype, _key8, type, shared);
         }
       }
     }
@@ -568,8 +582,8 @@ self.deejs = (function (exports) {
       value: function value() {
         var object = create(null);
 
-        for (var _key8 in this) {
-          object[_key8] = this[_key8];
+        for (var _key9 in this) {
+          object[_key9] = this[_key9];
         }
 
         return object;
