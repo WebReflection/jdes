@@ -1,5 +1,7 @@
 #!/usr/bin/env node
 
+'use strict';
+
 const {readFileSync} = require('fs');
 const {resolve} = require('path');
 
@@ -56,9 +58,13 @@ if (!parse.hasOwnProperty(TARGET)) {
   process.exit(1);
 }
 
+const transform = content => parse[TARGET](content);
+
 if (SOURCE) {
-  console.log(resolve(process.cwd(), SOURCE));
+  console.error('not implemented yet');
+  process.exit(1);
 }
 else {
   const content = readFileSync(0, 'utf-8').toString().trim();
+  process.stdout.write(transform(content));
 }

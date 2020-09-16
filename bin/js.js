@@ -1,119 +1,149 @@
-// TODO use a proper AST
+'use strict';
 
-const {stringify} = JSON;
+const traverse = require('@babel/traverse').default;
+const generate = require('@babel/generator').default;
 
-module.exports = content => {
-  const {keys} = Object;
-  let types = new Set;
-  const enums = (...values) => {
-    const out = [];
-    const value = [];
-    values.forEach(v => {
-      if (typeof v === 'object') {
-        const [key] = keys(v);
-        value.push(`${key}:${stringify(v[key])}`);
+const {parser, options, statics, types} = require('./utils.js');
+
+const Structs = new Set;
+
+const slice = (code, item) => code.slice(item.start, item.end);
+const objectExpression = o => bodyNode(`(${JSON.stringify(o)})`).expression;
+const bodyNode = js => parser.parse(js).program.body[0];
+
+const parse = code => {
+  let ast = parser.parse(code, options);
+  traverse(ast, {
+    enter(path) {
+      switch (path.type) {
+        case 'ImportDeclaration':
+          if (path.node.source.value === 'jdes')
+            path.remove();
+          break;
+        case 'CallExpression':
+          switch (path.node.callee.name) {
+            case 'enums': {
+              const object = objectExpression({});
+              for (const argument of path.node.arguments) {
+                if (argument.type === 'ObjectExpression')
+                  object.properties.push(...argument.properties);
+                else {
+                  const sub = {};
+                  sub[argument.value] = {};
+                  object.properties.push(...objectExpression(sub).properties);
+                }
+              }
+              path.replaceWith(object);
+              break;
+            }
+            case 'struct': {
+              const args = [];
+              const constructor = [];
+              const methods = [];
+              for (const argument of path.node.arguments) {
+                if (argument.type === 'ObjectExpression') {
+                  const [typed] = argument.properties;
+                  const {elements, type, properties, value} = typed.value;
+                  if (type === 'StringLiteral') {
+                    args.push(value);
+                    constructor.push(`this.${value}=${value}`);
+                  }
+                  else if (type === 'ObjectExpression') {
+                    for (const property of properties) {
+                      const {type, key, value} = property;
+                      if (type === 'ObjectProperty') {
+                        const {name} = key;
+                        args.push(`${name}=${slice(code, value)}`);
+                        constructor.push(`this.${name}=${name}`);
+                      }
+                      else if (type === 'ObjectMethod')
+                        methods.push(slice(code, property));
+                    }
+                  }
+                  else if (type === 'ArrayExpression') {
+                    for (const {value} of elements) {
+                      args.push(value);
+                      constructor.push(`this.${value}=${value}`);
+                    }
+                  }
+                }
+              }
+              const jdes = `class{constructor({${args.join(',')}}){${constructor.join(';')}}${methods.join('\n')}}`;
+              const Class = bodyNode(`(${jdes})`).expression;
+              path.replaceWith(Class);
+              break;
+            }
+          }
+          break;
       }
-      else
-        value.push(`${v}:Symbol(${stringify(v)})`);
-    });
-    types.forEach(type => {
-      out.push(`globalThis.${type}={${value.join(',')}};`);
-    });
-    return out.join('\n');
-  };
-  return `const Cast=(C,i)=>i instanceof C?i:new C(_);\nconst cast=(C,t,i)=>typeof i===t?i:C(i);\n${content.trim()}`
-    // DEFINITIONS
-    .replace(/define\(((?:\[[^]]+?\]|.+?))\s*,\s*([^\3]+?)\)([;\n\r])/g, (_, type, $2) => {
-      eval(`types = new Set([].concat(${type}))`);
-      const i = $2.indexOf('(');
-      return -1 < i ? eval($2) : '';
-    })
-    // TYPE CHECKS
-    .replace(/is\(\s*\{([^:]+?):\s*([^\3]+)(\s*\}\s*\))/g, (_, $1, $2) => {
-      switch ($1.trim()) {
-        case 'int':
-        case 'float':
-        case 'double':
-        case 'num':
-        case 'number':
-        case 'f32':
-        case 'f64':
-        case 'i8':
-        case 'i16':
-        case 'i32':
-        case 'u8':
-        case 'u16':
-        case 'u32':
-        case 'uc8':
-        case 'i64':
-        case 'u64':
-          return `typeof ${$2} === 'number'`;
-        case 'bool':
-        case 'boolean':
-          return `typeof ${$2} === 'boolean'`;
-        case 'str':
-        case 'string':
-          return `typeof ${$2} === 'string'`;
-        case 'void':
-        case 'undefined':
-          return `typeof ${$2} === 'undefined'`;
-        case 'fn':
-        case 'function':
-          return `typeof ${$2} === 'function'`;
-        default:
-          // TODO: enums and unions
-          return `${$2} instanceof ${$1}`;
+    }
+  });
+  code = generate(ast, code).code;
+  ast = parser.parse(code, options);
+  traverse(ast, {
+    enter(path) {
+      switch (path.type) {
+        case 'CallExpression':
+          switch (path.node.callee.name) {
+            case 'define': {
+              const constants = [];
+              const [args, expr] = path.node.arguments;
+              if (expr.name === 'union')
+                path.parentPath.remove();
+              else {
+                const isStruct = expr.type === 'ClassExpression';
+                for (const {value} of (args.type === 'StringLiteral' ? [args] : args.elements)) {
+                  constants.push(`const ${value}=${slice(code, expr)}`);
+                  if (isStruct)
+                    Structs.add(value);
+                }
+                let jdes = parser.parse(constants.join('\n')).program.body[0];
+                path.parentPath.replaceWith(jdes);
+              }
+              break;
+            }
+          }
+          break;
       }
-    })
-    // TYPE CASTS
-    // TODO: actually cast values (typed or not)
-    .replace(/as\(\s*\{([^:]+?):\s*([^\3]+)(\s*\}\s*\))/g, '$2')
-    // ASSIGNMENTS
-    .replace(/\{([^:]+?):\s*([^}]+?)\}(\s*=)([^;\n\r]+)/g, (_, $1, $2, $3, $4) => {
-      const type = $1.trim();
-      if (/^\[.+\]$/.test(type)) {
-        let constructor = '';
-        const ref = $4.trim();
-        switch (type.slice(1, -1)) {
-          case 'f64':
-          case 'double':
-            if (!constructor)
-              constructor = 'Float64Array';
-          case 'f32':
-            if (!constructor)
-              constructor = 'Float32Array';
-          case 'i8':
-            if (!constructor)
-              constructor = 'Int8Array';
-          case 'i16':
-            if (!constructor)
-              constructor = 'Int16Array';
-          case 'i32':
-            if (!constructor)
-              constructor = 'Int32Array';
-          case 'u8':
-            if (!constructor)
-              constructor = 'Uint8Array';
-          case 'u16':
-            if (!constructor)
-              constructor = 'Uint16Array';
-          case 'u32':
-            if (!constructor)
-              constructor = 'Uint32Array';
-          case 'uc8':
-            if (!constructor)
-              constructor = 'UintClamped8Array';
-          case 'i64':
-            if (!constructor)
-              constructor = 'Int64Array';
-          case 'u64':
-            if (!constructor)
-              constructor = 'Uint64Array';
-          default:
-            return `${$2} = Cast(${constructor},${ref})`;
-        }
+    }
+  });
+  code = generate(ast, code).code;
+  ast = parser.parse(code, options);
+  traverse(ast, {
+    enter(path) {
+      switch (path.type) {
+        case 'ObjectPattern':
+          switch (path.parentPath.type) {
+            case 'VariableDeclarator': {
+              const {key: {name: type}, value: {name}} = path.container.id.properties[0];
+              let jdes = slice(code, path.container.init);
+              if (/^\s*[{[]/.test(jdes)) {
+                if (Structs.has(type))
+                  jdes = `new ${type}(${jdes})`;
+                else if (statics.has(type))
+                  jdes = `new ${statics.get(type)}(${jdes})`;
+              }
+              path.parentPath.parentPath.replaceWith(
+                bodyNode(`${
+                  path.parentPath.parent.kind
+                } ${
+                  name
+                }=${
+                  jdes
+                }`)
+              );
+            }
+            // TODO: arguments
+            case 'ArrowFunctionExpression':
+            case 'FunctionDeclaration': {
+              break;
+            }
+          }
+          break;
       }
-      return $2 + $3 + $4;
-    })
-  ;
+    }
+  });
+  return generate(ast, {comments: false}, code).code;
 };
+
+module.exports = parse;
