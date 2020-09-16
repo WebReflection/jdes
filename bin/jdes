@@ -1,19 +1,47 @@
 #!/usr/bin/env node
 
-let TARGET = '';
+const {readFileSync} = require('fs');
+const {resolve} = require('path');
+
+let TARGET = 'js';
+let SOURCE = '';
+let DEST = '';
 
 for (let {argv} = process, i = 2, {length} = argv; i < length; i++) {
-  if (/^--/.test(argv[i])) {
+  if (/^-/.test(argv[i])) {
     const equal = argv[i].indexOf('=');
     const key = equal < 0 ? argv[i] : argv[i].slice(0, equal);
-    const value = equal < 0 ? argv[++i] : argv[i].slice(equal + 1);
+    const value = () => equal < 0 ? (++i < length ? argv[i] : '') : argv[i].slice(equal + 1);
     switch (key) {
-      case '--target':
-        if (!value) {
-          console.error(`unable to define ${key} value`);
+      case '-h':
+      case '--help':
+        console.log('');
+        console.log('Destructured JS @ https://github.com/webreflection/jdes');
+        console.log('  --help          this message');
+        console.log('  --source        source file or folder      [optional]');
+        console.log('  --dest          dest file or folder        [optional]');
+        console.log('  --target        compiled target: js        [default: js]');
+        console.log('');
+        process.exit(0);
+      case '--src':
+      case '--source':
+        const source = value();
+        if (!source) {
+          console.error('invalid source path');
           process.exit(1);
         }
-        TARGET = value.toLowerCase();
+        SOURCE = resolve(process.cwd(), source);
+        break;
+      case '--dest':
+        const dest = value();
+        if (!dest) {
+          console.error('invalid destination path');
+          process.exit(1);
+        }
+        DEST = resolve(process.cwd(), dest);
+        break;
+      case '--target':
+        TARGET = value().toLowerCase();
         break;
     }
   }
@@ -28,15 +56,9 @@ if (!parse.hasOwnProperty(TARGET)) {
   process.exit(1);
 }
 
-console.log(parse[TARGET](`
-define('int_float', union);
-define(['RGB'], enums(
-  {RED: 0},
-  'GREEN',
-  'BLUE'
-));
-const {[i32]: i} = [0];
-const {float: f} = as({float: i});
-if (is({float: f}))
-  console.log('OK');
-`));
+if (SOURCE) {
+  console.log(resolve(process.cwd(), SOURCE));
+}
+else {
+  const content = readFileSync(0, 'utf-8').toString().trim();
+}

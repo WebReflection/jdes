@@ -1,3 +1,5 @@
+// TODO use a proper AST
+
 const {stringify} = JSON;
 
 module.exports = content => {
@@ -19,9 +21,9 @@ module.exports = content => {
     });
     return out.join('\n');
   };
-  return content
+  return `const Cast=(C,i)=>i instanceof C?i:new C(_);\nconst cast=(C,t,i)=>typeof i===t?i:C(i);\n${content.trim()}`
     // DEFINITIONS
-    .replace(/define\(((?:\[[^}]+?\]|.+?))\s*,\s*([^\3]+?)\)([;\n\r])/g, (_, type, $2) => {
+    .replace(/define\(((?:\[[^]]+?\]|.+?))\s*,\s*([^\3]+?)\)([;\n\r])/g, (_, type, $2) => {
       eval(`types = new Set([].concat(${type}))`);
       const i = $2.indexOf('(');
       return -1 < i ? eval($2) : '';
@@ -65,7 +67,7 @@ module.exports = content => {
     })
     // TYPE CASTS
     // TODO: actually cast values (typed or not)
-    .replace(/as\(\s*\{[^:]+?:\s*([^\2]+)(\s*\}\s*\))/g, '$1')
+    .replace(/as\(\s*\{([^:]+?):\s*([^\3]+)(\s*\}\s*\))/g, '$2')
     // ASSIGNMENTS
     .replace(/\{([^:]+?):\s*([^}]+?)\}(\s*=)([^;\n\r]+)/g, (_, $1, $2, $3, $4) => {
       const type = $1.trim();
@@ -108,7 +110,7 @@ module.exports = content => {
             if (!constructor)
               constructor = 'Uint64Array';
           default:
-            return `${$2} = ($=>$ instanceof ${constructor}?$:new ${constructor}($))(${ref})`;
+            return `${$2} = Cast(${constructor},${ref})`;
         }
       }
       return $2 + $3 + $4;

@@ -4,7 +4,32 @@
 
 A type safe JS runtime.
 
+### TODO for CLI
+- [ ] target JS (cleanup)
+- [ ] target another PL that can export WASM or compile natively
+
+## API
+
+<details>
+  <summary><strong id="api-define">define(type, definition)</strong></summary>
+
+Allow the definition of enums, structs, unions, or any other arbitrary type.
+
+</details>
+
+
+### Getting Started
+
+[Codepen playground](https://codepen.io/WebReflection/pen/abNjjoV?editors=0011)
+
 ```js
+import {
+  define,                   // used to define types
+  as, is,                   // cast and check utils
+  enums, fn, struct, union, // specialized types
+  unsafe                    // performance boost for production
+} from 'jdes';
+
 // values and arrays declaration
 const {int: i} = 0;                     // is({int: i});
 const {[int]: ii} = [1, 2];             // is({[int]: ii});
@@ -16,7 +41,7 @@ const {string: s} = as({string: 123});  // s === "123"
 define('int_float', union);
 
 // functions {returnType: ({argType: name}, ...) => {}}
-const squared = fn({int: ({int_float: num}) => num * num});
+const squared = fn({int: ({int_float: num = 0}) => num * num});
 squared(3); // 9
 
 // enums
