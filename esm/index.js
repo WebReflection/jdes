@@ -267,22 +267,22 @@ export const struct = (...definition) => {
   const mandatory = [];
   for (let i = 0; i < definition.length; i++) {
     const {type, value} = inspect(definition[i]);
-    if (typeof value === 'string' || isArray(value)) {
-      for (const key of [].concat(value)) {
-        mandatory.push(key);
-        protoAccessor(prototype, key, type, void 0);
+    for (const entry of [].concat(value)) {
+      if (typeof entry === 'string') {
+        mandatory.push(entry);
+        protoAccessor(prototype, entry, type, void 0);
       }
-    }
-    else {
-      const [key] = ownKeys(value);
-      const shared = value[key];
-      if (typeof shared === 'function')
-        defineProperty(prototype, key, {value: fn({[type]: shared})});
       else {
-        if (SAFE && !is({[type]: shared}))
-          invalidType(type, shared);
-        arbitrary.push(key);
-        protoAccessor(prototype, key, type, shared);
+        const [key] = ownKeys(entry);
+        const shared = entry[key];
+        if (typeof shared === 'function')
+          defineProperty(prototype, key, {value: fn({[type]: shared})});
+        else {
+          if (SAFE && !is({[type]: shared}))
+            invalidType(type, shared);
+          arbitrary.push(key);
+          protoAccessor(prototype, key, type, shared);
+        }
       }
     }
   }

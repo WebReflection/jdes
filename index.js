@@ -547,34 +547,35 @@ self.deejs = (function (exports) {
           type = _inspect3.type,
           value = _inspect3.value;
 
-      if (typeof value === 'string' || isArray(value)) {
-        var _iterator5 = _createForOfIteratorHelper([].concat(value)),
-            _step5;
+      var _iterator5 = _createForOfIteratorHelper([].concat(value)),
+          _step5;
 
-        try {
-          for (_iterator5.s(); !(_step5 = _iterator5.n()).done;) {
-            var key = _step5.value;
-            mandatory.push(key);
-            protoAccessor(prototype, key, type, void 0);
+      try {
+        for (_iterator5.s(); !(_step5 = _iterator5.n()).done;) {
+          var entry = _step5.value;
+
+          if (typeof entry === 'string') {
+            mandatory.push(entry);
+            protoAccessor(prototype, entry, type, void 0);
+          } else {
+            var _ownKeys5 = ownKeys(entry),
+                _ownKeys6 = _slicedToArray(_ownKeys5, 1),
+                key = _ownKeys6[0];
+
+            var shared = entry[key];
+            if (typeof shared === 'function') defineProperty(prototype, key, {
+              value: fn(_defineProperty({}, type, shared))
+            });else {
+              if (SAFE && !is(_defineProperty({}, type, shared))) invalidType(type, shared);
+              arbitrary.push(key);
+              protoAccessor(prototype, key, type, shared);
+            }
           }
-        } catch (err) {
-          _iterator5.e(err);
-        } finally {
-          _iterator5.f();
         }
-      } else {
-        var _ownKeys5 = ownKeys(value),
-            _ownKeys6 = _slicedToArray(_ownKeys5, 1),
-            _key8 = _ownKeys6[0];
-
-        var shared = value[_key8];
-        if (typeof shared === 'function') defineProperty(prototype, _key8, {
-          value: fn(_defineProperty({}, type, shared))
-        });else {
-          if (SAFE && !is(_defineProperty({}, type, shared))) invalidType(type, shared);
-          arbitrary.push(_key8);
-          protoAccessor(prototype, _key8, type, shared);
-        }
+      } catch (err) {
+        _iterator5.e(err);
+      } finally {
+        _iterator5.f();
       }
     }
 
@@ -582,8 +583,8 @@ self.deejs = (function (exports) {
       value: function value() {
         var object = create(null);
 
-        for (var _key9 in this) {
-          object[_key9] = this[_key9];
+        for (var _key8 in this) {
+          object[_key8] = this[_key8];
         }
 
         return object;
