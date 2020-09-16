@@ -1,6 +1,6 @@
 {
   "name": "jdes",
-  "version": "0.1.4",
+  "version": "0.1.5",
   "description": "A type safe JS runtime",
   "bin": "./bin/d.js",
   "main": "./cjs/index.js",
@@ -13,7 +13,12 @@
     "coveralls": "nyc report --reporter=text-lcov | coveralls",
     "test": "nyc node test/index.js"
   },
-  "keywords": ["type", "safe", "JS", "runtime"],
+  "keywords": [
+    "type",
+    "safe",
+    "JS",
+    "runtime"
+  ],
   "author": "Andrea Giammarchi",
   "license": "ISC",
   "devDependencies": {
