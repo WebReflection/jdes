@@ -594,7 +594,7 @@ self.deejs = (function (exports) {
   };
   var union = function union(type) {
     var types = type.split('_');
-    if (SAFE && !types.every(function (type) {
+    if (SAFE && !every.call(types, function (type) {
       return JdeS.has(type);
     })) throw new TypeError("unable to define union: ".concat(type));
     return {
@@ -750,6 +750,17 @@ self.deejs = (function (exports) {
       check: check,
       cast: cast
     });
+  }); // OBJECTS
+
+  define(['object', 'obj'], {
+    check: function check(value, asArray) {
+      var _this6 = this;
+
+      return asArray ? every.call(value, function (v) {
+        return _this6.check(v, false);
+      }) : _typeof(value) === 'object' && value instanceof Object;
+    },
+    cast: Object
   });
 
   exports.as = as;

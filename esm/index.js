@@ -298,7 +298,7 @@ export const struct = (...definition) => {
 
 export const union = type => {
   const types = type.split('_');
-  if (SAFE && !types.every(type => JdeS.has(type)))
+  if (SAFE && !every.call(types, type => JdeS.has(type)))
     throw new TypeError(`unable to define union: ${type}`);
   return {
     check(value, asArray) {
@@ -411,4 +411,15 @@ define('float', {
   const check = (value, asArray) => asArray ? every.call(value, is) : is(value);
   const cast = value => is(value) ? value : transform(value);
   define([real, ...fake], {check, cast});
+});
+
+
+// OBJECTS
+define(['object', 'obj'], {
+  check(value, asArray) {
+    return asArray ?
+            every.call(value, v => this.check(v, false)) :
+            typeof value === 'object' && value instanceof Object
+  },
+  cast: Object
 });

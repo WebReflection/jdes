@@ -79,6 +79,9 @@ function test(unsafe) {
   const {int: s} = as({int: '123'});
   assert(s === 123, 'unexpected int cast');
 
+  const {obj: o} = {};
+  const {[obj]: oo} = [{}, {}];
+
   // Functions
   const squared = fn({int: ({int: i = 3}) => i * i});
   assert(squared() === 9, 'unexpected function result');
