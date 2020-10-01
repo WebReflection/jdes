@@ -5,7 +5,7 @@
 A type safe JS runtime.
 
 ### TODO for CLI
-- [ ] target JS (cleanup)
+- [x] target JS (cleanup)
 - [ ] target another PL that can export WASM or compile natively
 
 ## API
