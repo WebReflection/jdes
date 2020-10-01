@@ -5,6 +5,8 @@ const generate = require('@babel/generator').default;
 
 const {parser, options, statics, types} = require('./utils.js');
 
+const uid = (Math.random() * 1e7) >>> 0;
+
 const Structs = new Set;
 const Classes = new Map;
 const Enums = new Map;
@@ -26,15 +28,30 @@ const asStructOrTyped = (code, type, node) => {
 
 const slice = (code, item) => code.slice(item.start, item.end);
 
-const objectExpression = o => bodyNode(`(${JSON.stringify(o)})`).expression;
+const genericExpression = js => bodyNode(js)[0].expression;
 
-const bodyNode = js => parser.parse(js).program.body[0];
+const objectExpression = o => bodyNode(`(${JSON.stringify(o)})`)[0].expression;
+
+const bodyNode = js => parser.parse(js).program.body;
 
 const parse = code => {
   let ast = parser.parse(code, options);
+  const loops = [];
   traverse(ast, {
     enter(path) {
       switch (path.type) {
+        case 'ForOfStatement': {
+          const left = slice(code, path.node.left);
+          const right = slice(code, path.node.right);
+          const inner = slice(code, path.node.body).replace(/^\{|\}$/g, '');
+          const [o, i, l] = [`_${uid}`, `_${uid}i`, `_${uid}l`];
+          const forLoop = `for(let ${o}=${right},${l}=${o}.length,${i}=0;${i}<${l};${i}++)`;
+          // TODO: dafuq is wrong with for/of not being replaced in body?
+          const hole = loops.push(`${left}=_${uid}[_${uid}i]`) - 1;
+          const jdes = `${forLoop}{'\x00${hole}';${inner}}`;
+          path.replaceWithMultiple(bodyNode(jdes));
+          break;
+        }
         case 'ImportDeclaration':
           if (path.node.source.value === 'jdes')
             path.remove();
@@ -42,7 +59,7 @@ const parse = code => {
         case 'CallExpression':
           switch (path.node.callee.name) {
             case 'unsafe':
-              path.replaceWith(bodyNode('void 0').expression);
+              path.replaceWith(genericExpression('void 0'));
               break;
             case 'enums': {
               const object = objectExpression({});
@@ -96,7 +113,7 @@ const parse = code => {
                 }
               }
               const jdes = `class{constructor({${args.join(',')}}){${constructor.join(';')}}${methods.join('\n')}}`;
-              const Class = bodyNode(`(${jdes})`).expression;
+              const Class = genericExpression(`(${jdes})`);
               Classes.set(Class, jdes);
               path.replaceWith(Class);
               break;
@@ -122,8 +139,8 @@ const parse = code => {
                   if (isStruct)
                     Structs.add(value);
                 }
-                let jdes = parser.parse(constants.join('\n')).program.body[0];
-                path.parentPath.replaceWith(jdes);
+                let jdes = bodyNode(constants.join('\n'));
+                path.parentPath.replaceWithMultiple(jdes);
               }
               break;
             }
@@ -174,7 +191,7 @@ const parse = code => {
                     break;
                 }
               }
-              path.replaceWith(bodyNode(value).expression);
+              path.replaceWith(genericExpression(value));
               break;
             }
             case 'is': {
@@ -218,7 +235,7 @@ const parse = code => {
                     break;
                 }
               }
-              path.replaceWith(bodyNode(value).expression);
+              path.replaceWith(genericExpression(value));
               break;
             }
           }
@@ -234,8 +251,10 @@ const parse = code => {
         case 'ObjectPattern': {
           switch (path.parentPath.type) {
             case 'VariableDeclarator': {
+              if (path.parentPath.parentPath.container.type === 'ForOfStatement')
+                break;
               const {key: {name: type}, value: {name}} = path.container.id.properties[0];
-              path.parentPath.parentPath.replaceWith(
+              path.parentPath.parentPath.replaceWithMultiple(
                 bodyNode(`${
                   path.parentPath.parent.kind
                 } ${
@@ -254,10 +273,10 @@ const parse = code => {
               if (value.type === 'AssignmentPattern') {
                 name = value.left.name;
                 const js = asStructOrTyped(code, type, value.right);
-                path.replaceWith(bodyNode(`${name} = ${js}`).expression);
+                path.replaceWith(genericExpression(`${name} = ${js}`));
               }
               else
-                path.replaceWith(bodyNode(`${name}`).expression);
+                path.replaceWith(genericExpression(`${name}`));
               break;
             }
           }
@@ -266,7 +285,8 @@ const parse = code => {
       }
     }
   });
-  return generate(ast, generateOptions, code).code;
+  return generate(ast, generateOptions, code).code
+          .replace(/'\x00(\d+)'/g, (_, i) => loops[i]);
 };
 
 module.exports = parse;
