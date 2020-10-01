@@ -2,7 +2,7 @@
 
 'use strict';
 
-const {readFileSync} = require('fs');
+const {existsSync, readFileSync} = require('fs');
 const {resolve} = require('path');
 
 let TARGET = 'js';
@@ -47,6 +47,17 @@ for (let {argv} = process, i = 2, {length} = argv; i < length; i++) {
         break;
     }
   }
+  else {
+    if (SOURCE) {
+      console.error('duplicated source path');
+      process.exit(1);
+    }
+    SOURCE = resolve(process.cwd(), argv[i]);
+    if (!existsSync(SOURCE)) {
+      console.error('unable to parse source');
+      process.exit(1);
+    }
+  }
 }
 
 const parse = {
@@ -61,8 +72,8 @@ if (!parse.hasOwnProperty(TARGET)) {
 const transform = content => parse[TARGET](content);
 
 if (SOURCE) {
-  console.error('not implemented yet');
-  process.exit(1);
+  const content = readFileSync(SOURCE, 'utf-8').toString().trim();
+  process.stdout.write(transform(content));
 }
 else {
   const content = readFileSync(0, 'utf-8').toString().trim();
