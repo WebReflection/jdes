@@ -1,6 +1,6 @@
 {
   "name": "jdes",
-  "version": "0.2.6",
+  "version": "0.2.7",
   "description": "A type safe JS runtime",
   "bin": "./bin/d.js",
   "main": "./cjs/index.js",
