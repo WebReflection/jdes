@@ -239,7 +239,6 @@ const parse = code => {
   });
   code = generate(ast, code).code;
   ast = parser.parse(code, options);
-  const containers = new Set;
   traverse(ast, {
     enter(path) {
       switch (path.type) {
@@ -250,8 +249,6 @@ const parse = code => {
               if (container.type === 'ForOfStatement')
                 break;
               for (let i = 0; i < container.length; i++) {
-                if (containers.has(container[i]))
-                  continue;
                 const {kind, declarations} = container[i];
                 if (kind && declarations) {
                   const variables = [];
