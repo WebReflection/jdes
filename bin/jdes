@@ -61,6 +61,7 @@ for (let {argv} = process, i = 2, {length} = argv; i < length; i++) {
 }
 
 const parse = {
+  as: require('./as.js'),
   js: require('./js.js'),
   es3: require('./es3.js')
 };

@@ -12,13 +12,15 @@ const Structs = new Set;
 const Classes = new Map;
 const Enums = new Map;
 
+const isArray = code => /^\s*[{[]/.test(code);
+
 const generateOptions = {
   shouldPrintComment: val => /^!|@license|@preserve/.test(val)
 };
 
 const asStructOrTyped = (code, type, node) => {
   let js = slice(code, node);
-  if (/^\s*[{[]/.test(js)) {
+  if (isArray(js)) {
     if (Structs.has(type))
       js = `new ${type}(${js})`;
     else if (statics.has(type))
@@ -71,7 +73,11 @@ const parse = code => {
               break;
             }
             case 'fn': {
-              path.replaceWith(path.node.arguments[0].properties[0].value);
+              const [property] = path.node.arguments[0].properties;
+              const {key: {name: type}, value} = property;
+              const arr = isArray(slice(code, property)) ? '[]' : '';
+              value.returnType = genericExpression(`(():${type}${arr}=>{})`).returnType;
+              path.replaceWith(value);
               break;
             }
             case 'struct': {
@@ -247,13 +253,14 @@ const parse = code => {
             case 'VariableDeclarator': {
               if (path.parentPath.parentPath.container.type === 'ForOfStatement')
                 break;
-              const {key: {name: type}, value: {name}} = path.container.id.properties[0];
+              const [property] = path.container.id.properties;
+              const {key: {name: type}, value: {name}} = property;
               path.parentPath.parentPath.replaceWithMultiple(
                 bodyNode(`${
                   path.parentPath.parent.kind
                 } ${
                   name
-                }=${
+                }:${type}${isArray(slice(code, property))?'[]':''}=${
                   asStructOrTyped(code, type, path.container.init)
                 }`)
               );
@@ -271,10 +278,10 @@ const parse = code => {
               if (value.type === 'AssignmentPattern') {
                 name = value.left.name;
                 const js = asStructOrTyped(code, type, value.right);
-                path.replaceWith(genericExpression(`${name} = ${js}`));
+                path.replaceWithMultiple(genericExpression(`((${name}:${type} = ${js})=>{})`).params);
               }
               else
-                path.replaceWith(genericExpression(`${name}`));
+                path.replaceWithMultiple(genericExpression(`((${name}:${type})=>{})`).params);
               break;
             }
           }

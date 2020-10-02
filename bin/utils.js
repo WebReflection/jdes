@@ -7,7 +7,12 @@ const genericExpression = js => bodyNode(js)[0].expression;
 
 const objectExpression = o => bodyNode(`(${JSON.stringify(o)})`)[0].expression;
 
-const bodyNode = js => parser.parse(js).program.body;
+const bodyNode = js => parser.parse(js, options).program.body;
+
+const options = {
+  plugins: ['flow'],
+  sourceType: 'unambiguous'
+};
 
 const statics = new Map([
   ['f32', 'Float32Array'],
@@ -26,9 +31,7 @@ const statics = new Map([
 
 module.exports = {
   slice, genericExpression, objectExpression, bodyNode,
-  options: {
-    sourceType: 'unambiguous'
-  },
+  options,
   parser,
   traverse,
   statics,
