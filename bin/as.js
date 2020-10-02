@@ -251,6 +251,7 @@ const parse = code => {
         case 'ObjectPattern': {
           switch (path.parentPath.type) {
             case 'VariableDeclarator': {
+              // TODO: align with the JS parser
               if (path.parentPath.parentPath.container.type === 'ForOfStatement')
                 break;
               const [property] = path.container.id.properties;

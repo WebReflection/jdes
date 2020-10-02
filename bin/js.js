@@ -239,24 +239,31 @@ const parse = code => {
   });
   code = generate(ast, code).code;
   ast = parser.parse(code, options);
+  const containers = new Set;
   traverse(ast, {
     enter(path) {
       switch (path.type) {
         case 'ObjectPattern': {
           switch (path.parentPath.type) {
             case 'VariableDeclarator': {
-              if (path.parentPath.parentPath.container.type === 'ForOfStatement')
+              const {container} = path.parentPath.parentPath;
+              if (container.type === 'ForOfStatement')
                 break;
-              const {key: {name: type}, value: {name}} = path.container.id.properties[0];
-              path.parentPath.parentPath.replaceWithMultiple(
-                bodyNode(`${
-                  path.parentPath.parent.kind
-                } ${
-                  name
-                }=${
-                  asStructOrTyped(code, type, path.container.init)
-                }`)
-              );
+              for (let i = 0; i < container.length; i++) {
+                if (containers.has(container[i]))
+                  continue;
+                const {kind, declarations} = container[i];
+                if (kind && declarations) {
+                  const variables = [];
+                  for (const declaration of declarations) {
+                    if (declaration.id.properties)
+                      for (const {key: {name: type}, value: {name}} of declaration.id.properties)
+                        variables.push(`${name}=${asStructOrTyped(code, type, declaration.init)}`);
+                  }
+                  if (variables.length)
+                    container[i] = bodyNode(`${kind} ${variables.join(',')}`)[0];
+                }
+              }
               break;
             }
             case 'ClassMethod':
