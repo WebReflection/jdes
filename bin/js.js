@@ -3,9 +3,10 @@
 const traverse = require('@babel/traverse').default;
 const generate = require('@babel/generator').default;
 
-const {parser, options, statics, types} = require('./utils.js');
-
-const uid = (Math.random() * 1e7) >>> 0;
+const {
+  parser, options, statics, types,
+  slice, genericExpression, objectExpression, bodyNode
+} = require('./utils.js');
 
 const Structs = new Set;
 const Classes = new Map;
@@ -26,14 +27,6 @@ const asStructOrTyped = (code, type, node) => {
   return js;
 };
 
-const slice = (code, item) => code.slice(item.start, item.end);
-
-const genericExpression = js => bodyNode(js)[0].expression;
-
-const objectExpression = o => bodyNode(`(${JSON.stringify(o)})`)[0].expression;
-
-const bodyNode = js => parser.parse(js).program.body;
-
 const parse = code => {
   let ast = parser.parse(code, options);
   const loops = [];
@@ -44,10 +37,11 @@ const parse = code => {
           const left = slice(code, path.node.left);
           const right = slice(code, path.node.right);
           const inner = slice(code, path.node.body).replace(/^\{|\}$/g, '');
-          const [o, i, l] = [`_${uid}`, `_${uid}i`, `_${uid}l`];
-          const forLoop = `for(let ${o}=${right},${l}=${o}.length,${i}=0;${i}<${l};${i}++)`;
+          const uid = (Math.random() * 1e3) >>> 0;
+          const [o, i] = [`_${uid}a`, `_${uid}i`];
+          const forLoop = `for(let ${o}=${right},${i}=0;${i}<${o}.length;${i}++)`;
           // TODO: dafuq is wrong with for/of not being replaced in body?
-          const hole = loops.push(`${left}=_${uid}[_${uid}i]`) - 1;
+          const hole = loops.push(`${left}=${o}[${i}]`) - 1;
           const jdes = `${forLoop}{'\x00${hole}';${inner}}`;
           path.replaceWithMultiple(bodyNode(jdes));
           break;

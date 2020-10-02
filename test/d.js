@@ -1,6 +1,3 @@
-function test(lol) {
-  for (const {a, b} of lol) {
-    console.log(a.toString());
-    console.log(b.toString());
-  }
+for (const {key, value} of [{key: 'a', value: 1}, {key: 'b', value: 2}]) {
+  console.log(key, value);
 }

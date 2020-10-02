@@ -61,7 +61,8 @@ for (let {argv} = process, i = 2, {length} = argv; i < length; i++) {
 }
 
 const parse = {
-  js: require('./js'),
+  js: require('./js.js'),
+  es3: require('./es3.js')
 };
 
 if (!parse.hasOwnProperty(TARGET)) {
