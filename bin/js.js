@@ -260,7 +260,9 @@ const parse = code => {
               break;
             }
             case 'ArrowFunctionExpression':
-            case 'FunctionDeclaration': {
+            case 'ClassMethod':
+            case 'FunctionDeclaration':
+            case 'FunctionExpression': {
               const {key, value} = path.node.properties[0];
               const {name: type} = key;
               let {name} = value;

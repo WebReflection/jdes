@@ -24,17 +24,31 @@ module.exports = code => {
         const prototype = [];
         const {name} = path.parentPath.node.id;
         for (const method of path.node.body.body) {
-          if (method.key.name === 'constructor') {
+          const key = method.key.name;
+          if (key === 'constructor') {
             Class.push(
               slice(code, method)
                 .replace(/^constructor/, name)
             );
           }
           else {
-            prototype.push(
-              name + '.prototype.' + method.key.name + '=' +
-                slice(code, method).replace(/^[^(]+?\(/, 'function(')
-            );
+            const fn = slice(code, method);
+            const body = fn.replace(/^[^(]+?\(/, 'function(');
+            if (/^get\s+/.test(fn)) {
+              prototype.push(
+                `${name}.prototype.__defineGetter__("${key}",${body})`
+              );
+            }
+            else if (/^set\s+/.test(fn)) {
+              prototype.push(
+                `${name}.prototype.__defineSetter__("${key}",${body})`
+              );
+            }
+            else {
+              prototype.push(
+                name + '.prototype.' + key + '=' + body
+              );
+            }
           }
         }
         const ES3 = `${Class.join('')}\n${prototype.join('\n')}`;
