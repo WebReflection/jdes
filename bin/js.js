@@ -27,6 +27,16 @@ const asStructOrTyped = (code, type, node) => {
   return js;
 };
 
+const getVariables = (code, declarations) => {
+  const variables = [];
+  for (const declaration of declarations) {
+    if (declaration.id.properties)
+      for (const {key: {name: type}, value: {name}} of declaration.id.properties)
+        variables.push(`${name}=${asStructOrTyped(code, type, declaration.init)}`);
+  }
+  return variables;
+};
+
 const parse = code => {
   let ast = parser.parse(code, options);
   const loops = [];
@@ -40,9 +50,10 @@ const parse = code => {
           const uid = (Math.random() * 1e3) >>> 0;
           const [o, i] = [`_${uid}a`, `_${uid}i`];
           const forLoop = `for(let ${o}=${right},${i}=0;${i}<${o}.length;${i}++)`;
-          // TODO: dafuq is wrong with for/of not being replaced in body?
-          const hole = loops.push(`${left}=${o}[${i}]`) - 1;
-          const jdes = `${forLoop}{'\x00${hole}';${inner}}`;
+          // TODO: this was a workaround not worth it
+          // const hole = loops.push(`${left}=${o}[${i}]`) - 1;
+          // const jdes = `${forLoop}{'\x00${hole}';${inner}}`;
+          const jdes = `${forLoop}{${left}=${o}[${i}];${inner}}`;
           path.replaceWithMultiple(bodyNode(jdes));
           break;
         }
@@ -245,20 +256,23 @@ const parse = code => {
         case 'ObjectPattern': {
           switch (path.parentPath.type) {
             case 'VariableDeclarator': {
-              const {container} = path.parentPath.parentPath;
+              let {container} = path.parentPath.parentPath;
               if (container.type === 'ForOfStatement')
                 break;
-              for (let i = 0; i < container.length; i++) {
-                const {kind, declarations} = container[i];
-                if (kind && declarations) {
-                  const variables = [];
-                  for (const declaration of declarations) {
-                    if (declaration.id.properties)
-                      for (const {key: {name: type}, value: {name}} of declaration.id.properties)
-                        variables.push(`${name}=${asStructOrTyped(code, type, declaration.init)}`);
+              if (container.type === 'ForStatement') {
+                const {kind, declarations} = container.init;
+                const variables = getVariables(code, declarations);
+                if (variables.length)
+                  container.init = bodyNode(`${kind} ${variables.join(',')}`)[0];
+              }
+              else {
+                for (let i = 0; i < container.length; i++) {
+                  const {kind, declarations} = container[i];
+                  if (kind && declarations) {
+                    const variables = getVariables(code, declarations);
+                    if (variables.length)
+                      container[i] = bodyNode(`${kind} ${variables.join(',')}`)[0];
                   }
-                  if (variables.length)
-                    container[i] = bodyNode(`${kind} ${variables.join(',')}`)[0];
                 }
               }
               break;
@@ -288,7 +302,7 @@ const parse = code => {
     }
   });
   return generate(ast, generateOptions, code).code
-          .replace(/'\x00(\d+)'/g, (_, i) => loops[i]);
+          // .replace(/'\x00(\d+)'/g, (_, i) => loops[i]);
 };
 
 module.exports = parse;
