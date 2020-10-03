@@ -52,8 +52,8 @@ int main() {
   strcpy(b1.title, "C Programming");
   b1.id = 6495407;
 
-  b2.title = (char *) realloc(b2.title, 16);
-  strcpy(b2.title, "Telecom Billing");
+  b2.title = (char *) realloc(b2.title, 19);
+  strcpy(b2.title, "Telecom Billing 💩");
   b2.id = 6495700;
 
   printBook(b1);

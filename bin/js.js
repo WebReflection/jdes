@@ -40,7 +40,6 @@ const getVariables = (code, declarations) => {
 
 const parse = code => {
   let ast = parser.parse(code, options);
-  const loops = [];
   traverse(ast, {
     enter(path) {
       switch (path.type) {
@@ -274,8 +273,7 @@ const parse = code => {
       }
     }
   });
-  return generate(ast, generateOptions, code).code
-          // .replace(/'\x00(\d+)'/g, (_, i) => loops[i]);
+  return generate(ast, generateOptions, code).code;
 };
 
 module.exports = parse;

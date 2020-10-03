@@ -12,7 +12,8 @@ let DEST = '';
 
 const parse = {
   js: require('./js.js'),
-  as: require('./as.js'),
+  c: require('./c.js'),
+  // as: require('./as.js'),
   es3: require('./es3.js')
 };
 
