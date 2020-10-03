@@ -44,5 +44,37 @@ module.exports = {
     'object', 'obj',
     'function', 'fn',
     'void'
-  ].concat(...statics))
+  ].concat(...statics)),
+  exit(Classes, Enums) {
+    return path => {
+      switch (path.type) {
+        case 'CallExpression':
+          switch (path.node.callee.name) {
+            case 'define': {
+              const [args, expr] = path.node.arguments;
+              if (expr.name === 'union')
+                path.parentPath.remove();
+              else {
+                let first = '';
+                const constants = [];
+                const isStruct = expr.type === 'ClassExpression';
+                for (const {value} of (args.type === 'StringLiteral' ? [args] : args.elements)) {
+                  if (!first) {
+                    first = value;
+                    constants.push(`const ${value}=${Classes.get(expr) || Enums.get(expr)}`);
+                  }
+                  else
+                    constants.push(`${value}=${first}`);
+                  if (isStruct)
+                    Structs.add(value);
+                }
+                path.parentPath.replaceWithMultiple(bodyNode(`${constants.join(',')}`));
+              }
+              break;
+            }
+          }
+          break;
+      }
+    };
+  }
 };

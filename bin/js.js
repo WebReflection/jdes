@@ -5,7 +5,8 @@ const generate = require('@babel/generator').default;
 
 const {
   parser, options, statics, types,
-  slice, genericExpression, objectExpression, bodyNode
+  slice, genericExpression, objectExpression, bodyNode,
+  exit
 } = require('./utils.js');
 
 const Structs = new Set;
@@ -50,9 +51,6 @@ const parse = code => {
           const uid = (Math.random() * 1e3) >>> 0;
           const [o, i] = [`_${uid}a`, `_${uid}i`];
           const forLoop = `for(let ${o}=${right},${i}=0;${i}<${o}.length;${i}++)`;
-          // TODO: this was a workaround not worth it
-          // const hole = loops.push(`${left}=${o}[${i}]`) - 1;
-          // const jdes = `${forLoop}{'\x00${hole}';${inner}}`;
           const jdes = `${forLoop}{${left}=${o}[${i}];${inner}}`;
           path.replaceWithMultiple(bodyNode(jdes));
           break;
@@ -127,32 +125,7 @@ const parse = code => {
           break;
       }
     },
-    exit(path) {
-      switch (path.type) {
-        case 'CallExpression':
-          switch (path.node.callee.name) {
-            case 'define': {
-              const constants = [];
-              const [args, expr] = path.node.arguments;
-              if (expr.name === 'union')
-                path.parentPath.remove();
-              else {
-                const isStruct = expr.type === 'ClassExpression';
-                for (const {value} of (args.type === 'StringLiteral' ? [args] : args.elements)) {
-                  const str = Classes.get(expr) || Enums.get(expr);
-                  constants.push(`const ${value}=${str}`);
-                  if (isStruct)
-                    Structs.add(value);
-                }
-                let jdes = bodyNode(constants.join('\n'));
-                path.parentPath.replaceWithMultiple(jdes);
-              }
-              break;
-            }
-          }
-          break;
-      }
-    }
+    exit: exit(Classes, Enums)
   });
   code = generate(ast, code).code;
   ast = parser.parse(code, options);

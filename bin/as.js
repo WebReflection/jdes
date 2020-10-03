@@ -5,7 +5,8 @@ const generate = require('@babel/generator').default;
 
 const {
   parser, options, statics, types,
-  slice, genericExpression, objectExpression, bodyNode
+  slice, genericExpression, objectExpression, bodyNode,
+  exit
 } = require('./utils.js');
 
 const Structs = new Set;
@@ -122,32 +123,7 @@ const parse = code => {
           break;
       }
     },
-    exit(path) {
-      switch (path.type) {
-        case 'CallExpression':
-          switch (path.node.callee.name) {
-            case 'define': {
-              const constants = [];
-              const [args, expr] = path.node.arguments;
-              if (expr.name === 'union')
-                path.parentPath.remove();
-              else {
-                const isStruct = expr.type === 'ClassExpression';
-                for (const {value} of (args.type === 'StringLiteral' ? [args] : args.elements)) {
-                  const str = Classes.get(expr) || Enums.get(expr);
-                  constants.push(`const ${value}=${str}`);
-                  if (isStruct)
-                    Structs.add(value);
-                }
-                let jdes = bodyNode(constants.join('\n'));
-                path.parentPath.replaceWithMultiple(jdes);
-              }
-              break;
-            }
-          }
-          break;
-      }
-    }
+    exit: exit(Classes, Enums)
   });
   code = generate(ast, code).code;
   ast = parser.parse(code, options);
