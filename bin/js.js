@@ -9,9 +9,9 @@ const {
   exit
 } = require('./utils.js');
 
-const Structs = new Set;
 const Classes = new Map;
 const Enums = new Map;
+const Structs = new Set;
 
 const generateOptions = {
   shouldPrintComment: val => /^!|@license|@preserve/.test(val)
@@ -149,7 +149,7 @@ const parse = code => {
           break;
       }
     },
-    exit: exit(Classes, Enums)
+    exit: exit(Classes, Enums, Structs)
   });
   code = generate(ast, code).code;
   ast = parser.parse(code, options);

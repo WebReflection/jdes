@@ -388,4 +388,12 @@ define('Point3D', struct(
 const {Point3D: p3d} = {x: 1, y: 2};
 p3d.coords();       // [1, 2, 0]
 is({Point3D: p3d}); // true
+
+// set
+define('Str', set(str));
+const {Str: typedSet} = ['entry'];
+
+// map
+define('StrInt', map(str, int));
+const {StrInt: typedMap} = [['first', 1]];
 ```

@@ -48,7 +48,7 @@ module.exports = {
     'function', 'fn',
     'void'
   ].concat(...statics)),
-  exit(Classes, Enums) {
+  exit(Classes, Enums, Structs) {
     return path => {
       switch (path.type) {
         case 'CallExpression':
@@ -65,6 +65,7 @@ module.exports = {
                     first = value;
                     const Class = expr.elements.length === 2 ? 'Map' : 'Set';
                     globals.add(Class);
+                    Structs.add(value);
                     constants.push(`const ${value}=${Class}`);
                   }
                   else
