@@ -1,4 +1,4 @@
-const {as, define, enums, fn, is, struct, union, unsafe} = require('../cjs');
+const {as, define, enums, fn, is, struct, union, unsafe, set, map} = require('../cjs');
 
 const assert = (ok, comment) => {
   console.assert(ok, comment);
@@ -19,6 +19,11 @@ define('Point3D', struct(
     return [this.x, this.y, this.z];
   }}}
 ));
+
+define('NSet', set(int));
+define('ANSet', set([int]));
+define('NMap', map(str, int));
+define('ANMap', map(str, [int]));
 
 console.time('safe');
 test(false);
@@ -107,6 +112,13 @@ function test(unsafe) {
 
   const {[Point3D]: p3ds} = [p3d, {x: 3, y: 4, z: 5}];
   assert(Array.isArray(p3ds), 'unexpected Point3D as array');
+
+  // Set
+  const {NSet: ns} = [1];
+  assert(ns.size === 1 && ns.has(1), 'unexpected Set behavior');
+
+  const {NMap: nm} = [['one', 1]];
+  assert(nm.size === 1 && nm.has('one') && nm.get('one') === 1, 'unexpected Map behavior');
 }
 
 function testFailures() {

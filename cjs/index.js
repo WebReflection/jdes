@@ -36,6 +36,7 @@ const typed = new Map;
 
 const enumerable = new Set;
 const structs = new Set;
+const mapOrSet = new Set;
 
 const proxies = new WeakSet;
 
@@ -142,7 +143,8 @@ const define = (types, def) => {
   const isUnion = def === union;
   const isEnum = !isUnion && enumerable.has(def);
   const isStruct = !isUnion && !isEnum && structs.has(def);
-  if (!isUnion && !isEnum && !isStruct && (!def.check || !def.cast))
+  const isMapOrSet = !isUnion && !isEnum && !isStruct && mapOrSet.has(def);
+  if (!isUnion && !isEnum && !isStruct && !isMapOrSet && (!def.check || !def.cast))
     throw new Error(`unable to define ${types} without check and cast`);
   for (const type of [].concat(types)) {
     const isVoid = /^(?:void|undefined)$/.test(type);
@@ -160,7 +162,18 @@ const define = (types, def) => {
         cast(value) {
           return value instanceof def ? value : new def(value);
         }
-      } : assign({}, def));
+      } :
+      (isMapOrSet ? {
+        check(value, asArray) {
+          return asArray ?
+                  every.call(value, v => this.check(v, false)) :
+                  (value instanceof def || isArray(value));
+        },
+        cast(value) {
+          return value instanceof def ? value : new def(value);
+        }
+      } : assign({}, def))
+    );
     const array = isEnum ? G[type].toString() : Symbol(type);
     if (!isEnum && !isVoid)
       defineProperty(G, type, {configurable: true, value: array});
@@ -170,7 +183,7 @@ const define = (types, def) => {
       get() {
         if (SAFE && !_.check(this, false))
           invalidType(type, this);
-        return isStruct ? _.cast(this) : this;
+        return isStruct || isMapOrSet ? _.cast(this) : this;
       }
     });
     if (!isVoid) {
@@ -186,7 +199,7 @@ const define = (types, def) => {
             invalidType(array, this);
           if (SAFE && proxies.has(this))
             return this;
-          const result = isStruct ? arrayMap.call(this, _.cast, _) : this;
+          const result = isStruct || isMapOrSet ? arrayMap.call(this, _.cast, _) : this;
           return proxyArray(patchArray(result, array, _), type, _);
         }
       });
@@ -323,17 +336,22 @@ const union = type => {
 };
 exports.union = union;
 
-const map = (keyType, valueType) => () => {
+// TODO: guard against [type] vs type
+const map = (keyType, valueType) => {
+  const asKeyArray = isArray(keyType);
+  const asValueArray = isArray(valueType);
+  const k = JdeS.get(asKeyArray ? keyType[0] : keyType);
+  const v = JdeS.get(asValueArray ? valueType[0] : valueType);
   const Class = !SAFE ? Map : function GMap(iterable) {
     const instance = new Map;
     const {set} = instance;
-    instance.set = function (key, value) {
-      if (!is({[keyType]: key}))
+    defineProperty(instance, 'set', {value(key, value) {
+      if (!k.check(key, asKeyArray))
         invalidType(keyType, key);
-      if (!is({[valueType]: value}))
+      if (!v.check(value, asValueArray))
         invalidType(valueType, value);
       return set.call(this, key, value);
-    };
+    }});
     if (iterable)
       for (let i = 0; i < iterable.length; i++) {
         const pair = iterable[i];
@@ -341,26 +359,28 @@ const map = (keyType, valueType) => () => {
       }
     return instance;
   };
-  structs.add(Class);
+  mapOrSet.add(Class);
   return Class;
 };
 exports.map = map;
 
-const set = valueType => () => {
+const set = valueType => {
+  const asValueArray = isArray(valueType);
+  const v = JdeS.get(asValueArray ? valueType[0] : valueType);
   const Class = !SAFE ? Set : function GSet(iterable) {
     const instance = new Set;
     const {add} = instance;
-    instance.add = function (value) {
-      if (!is({[valueType]: value}))
+    defineProperty(instance, 'add', {value(value) {
+      if (!v.check(value, asValueArray))
         invalidType(valueType, value);
       return add.call(this, value);
-    };
+    }});
     if (iterable)
       for (let i = 0; i < iterable.length; i++)
         instance.add(iterable[i]);
     return instance;
   };
-  structs.add(Class);
+  mapOrSet.add(Class);
   return Class;
 };
 exports.set = set;

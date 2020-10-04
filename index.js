@@ -216,6 +216,7 @@ self.deejs = (function (exports) {
   var typed = new Map();
   var enumerable = new Set();
   var structs = new Set();
+  var mapOrSet = new Set();
   var proxies = new WeakSet();
   var defaultArg = new Proxy({}, {
     get: function get() {
@@ -345,7 +346,8 @@ self.deejs = (function (exports) {
     var isUnion = def === union;
     var isEnum = !isUnion && enumerable.has(def);
     var isStruct = !isUnion && !isEnum && structs.has(def);
-    if (!isUnion && !isEnum && !isStruct && (!def.check || !def.cast)) throw new Error("unable to define ".concat(types, " without check and cast"));
+    var isMapOrSet = !isUnion && !isEnum && !isStruct && mapOrSet.has(def);
+    if (!isUnion && !isEnum && !isStruct && !isMapOrSet && (!def.check || !def.cast)) throw new Error("unable to define ".concat(types, " without check and cast"));
 
     var _iterator = _createForOfIteratorHelper([].concat(types)),
         _step;
@@ -367,6 +369,17 @@ self.deejs = (function (exports) {
           cast: function cast(value) {
             return value instanceof def ? value : new def(value);
           }
+        } : isMapOrSet ? {
+          check: function check(value, asArray) {
+            var _this2 = this;
+
+            return asArray ? every.call(value, function (v) {
+              return _this2.check(v, false);
+            }) : value instanceof def || isArray(value);
+          },
+          cast: function cast(value) {
+            return value instanceof def ? value : new def(value);
+          }
         } : assign({}, def);
 
         var array = isEnum ? G[type].toString() : Symbol(type);
@@ -379,7 +392,7 @@ self.deejs = (function (exports) {
           configurable: true,
           get: function get() {
             if (SAFE && !_.check(this, false)) invalidType(type, this);
-            return isStruct ? _.cast(this) : this;
+            return isStruct || isMapOrSet ? _.cast(this) : this;
           }
         });
 
@@ -392,7 +405,7 @@ self.deejs = (function (exports) {
               if (typed.has(type)) return _.cast(this);
               if (SAFE && !isArray(this)) invalidType(array, this);
               if (SAFE && proxies.has(this)) return this;
-              var result = isStruct ? arrayMap.call(this, _.cast, _) : this;
+              var result = isStruct || isMapOrSet ? arrayMap.call(this, _.cast, _) : this;
               return proxyArray(patchArray(result, array, _), type, _);
             }
           });
@@ -448,10 +461,10 @@ self.deejs = (function (exports) {
       });
       return {
         check: function check(value, asArray) {
-          var _this2 = this;
+          var _this3 = this;
 
           return asArray ? every.call(value, function (v) {
-            return _this2.check(v, false);
+            return _this3.check(v, false);
           }) : values.some(function (v) {
             return same(v, value);
           });
@@ -600,10 +613,10 @@ self.deejs = (function (exports) {
     })) throw new TypeError("unable to define union: ".concat(type));
     return {
       check: function check(value, asArray) {
-        var _this3 = this;
+        var _this4 = this;
 
         return asArray ? every.call(value, function (v) {
-          return _this3.check(v, false);
+          return _this4.check(v, false);
         }) : types.some(function (type) {
           return is(_defineProperty({}, type, value));
         });
@@ -616,48 +629,51 @@ self.deejs = (function (exports) {
         return JdeS.get(types[i]).cast(value);
       }
     };
-  };
+  }; // TODO: guard against [type] vs type
+
   var map = function map(keyType, valueType) {
-    return function () {
-      var Class = !SAFE ? Map : function GMap(iterable) {
-        var instance = new Map();
-        var set = instance.set;
-
-        instance.set = function (key, value) {
-          if (!is(_defineProperty({}, keyType, key))) invalidType(keyType, key);
-          if (!is(_defineProperty({}, valueType, value))) invalidType(valueType, value);
-          return set.call(this, key, value);
-        };
-
-        if (iterable) for (var i = 0; i < iterable.length; i++) {
-          var pair = iterable[i];
-          instance.set(pair[0], pair[1]);
+    var asKeyArray = isArray(keyType);
+    var asValueArray = isArray(valueType);
+    var k = JdeS.get(asKeyArray ? keyType[0] : keyType);
+    var v = JdeS.get(asValueArray ? valueType[0] : valueType);
+    var Class = !SAFE ? Map : function GMap(iterable) {
+      var instance = new Map();
+      var set = instance.set;
+      defineProperty(instance, 'set', {
+        value: function value(key, _value) {
+          if (!k.check(key, asKeyArray)) invalidType(keyType, key);
+          if (!v.check(_value, asValueArray)) invalidType(valueType, _value);
+          return set.call(this, key, _value);
         }
-        return instance;
-      };
-      structs.add(Class);
-      return Class;
+      });
+      if (iterable) for (var i = 0; i < iterable.length; i++) {
+        var pair = iterable[i];
+        instance.set(pair[0], pair[1]);
+      }
+      return instance;
     };
+    mapOrSet.add(Class);
+    return Class;
   };
   var set = function set(valueType) {
-    return function () {
-      var Class = !SAFE ? Set : function GSet(iterable) {
-        var instance = new Set();
-        var add = instance.add;
-
-        instance.add = function (value) {
-          if (!is(_defineProperty({}, valueType, value))) invalidType(valueType, value);
-          return add.call(this, value);
-        };
-
-        if (iterable) for (var i = 0; i < iterable.length; i++) {
-          instance.add(iterable[i]);
+    var asValueArray = isArray(valueType);
+    var v = JdeS.get(asValueArray ? valueType[0] : valueType);
+    var Class = !SAFE ? Set : function GSet(iterable) {
+      var instance = new Set();
+      var add = instance.add;
+      defineProperty(instance, 'add', {
+        value: function value(_value2) {
+          if (!v.check(_value2, asValueArray)) invalidType(valueType, _value2);
+          return add.call(this, _value2);
         }
-        return instance;
-      };
-      structs.add(Class);
-      return Class;
+      });
+      if (iterable) for (var i = 0; i < iterable.length; i++) {
+        instance.add(iterable[i]);
+      }
+      return instance;
     };
+    mapOrSet.add(Class);
+    return Class;
   };
   var unsafe = function unsafe() {
     SAFE = false;
@@ -740,10 +756,10 @@ self.deejs = (function (exports) {
   });
   define('int', {
     check: function check(i, asArray) {
-      var _this4 = this;
+      var _this5 = this;
 
       return asArray ? every.call(i, function (i) {
-        return _this4.check(i, false);
+        return _this5.check(i, false);
       }) : same(this.cast(i), i);
     },
     cast: function cast(i) {
@@ -752,10 +768,10 @@ self.deejs = (function (exports) {
   });
   define('float', {
     check: function check(f, asArray) {
-      var _this5 = this;
+      var _this6 = this;
 
       return asArray ? every.call(f, function (f) {
-        return _this5.check(f, false);
+        return _this6.check(f, false);
       }) : same(this.cast(f), f);
     },
     cast: function cast(f) {
@@ -797,10 +813,10 @@ self.deejs = (function (exports) {
 
   define(['object', 'obj'], {
     check: function check(value, asArray) {
-      var _this6 = this;
+      var _this7 = this;
 
       return asArray ? every.call(value, function (v) {
-        return _this6.check(v, false);
+        return _this7.check(v, false);
       }) : _typeof(value) === 'object' && value instanceof Object;
     },
     cast: Object
