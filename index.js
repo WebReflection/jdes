@@ -205,7 +205,7 @@ self.deejs = (function (exports) {
   var concat = AProto.concat,
       every = AProto.every,
       filter = AProto.filter,
-      map = AProto.map,
+      arrayMap = AProto.map,
       push = AProto.push,
       slice = AProto.slice,
       splice = AProto.splice;
@@ -250,7 +250,7 @@ self.deejs = (function (exports) {
 
   var invalidType = function invalidType(T, V) {
     var asArray = isArray(V);
-    var INVALID_TYPE = "expected type ".concat(asType(T), " but got ").concat([asArray ? 'array' : _typeof(V), asArray ? map.call(V, asString) : asString(V)].join(': '));
+    var INVALID_TYPE = "expected type ".concat(asType(T), " but got ").concat([asArray ? 'array' : _typeof(V), asArray ? arrayMap.call(V, asString) : asString(V)].join(': '));
     throw new TypeError(INVALID_TYPE);
   };
 
@@ -270,7 +270,7 @@ self.deejs = (function (exports) {
     if (SAFE) {
       patchMethod(array, type, 'concat', concat, _);
       patchMethod(array, type, 'filter', filter, _);
-      patchMethod(array, type, 'map', map, _);
+      patchMethod(array, type, 'map', arrayMap, _);
       patchMethod(array, type, 'slice', slice, _);
       defineProperty(array, 'push', {
         value: function value() {
@@ -392,7 +392,7 @@ self.deejs = (function (exports) {
               if (typed.has(type)) return _.cast(this);
               if (SAFE && !isArray(this)) invalidType(array, this);
               if (SAFE && proxies.has(this)) return this;
-              var result = isStruct ? map.call(this, _.cast, _) : this;
+              var result = isStruct ? arrayMap.call(this, _.cast, _) : this;
               return proxyArray(patchArray(result, array, _), type, _);
             }
           });
@@ -617,6 +617,48 @@ self.deejs = (function (exports) {
       }
     };
   };
+  var map = function map(keyType, valueType) {
+    return function () {
+      var Class = !SAFE ? Map : function GMap(iterable) {
+        var instance = new Map();
+        var set = instance.set;
+
+        instance.set = function (key, value) {
+          if (!is(_defineProperty({}, keyType, key))) invalidType(keyType, key);
+          if (!is(_defineProperty({}, valueType, value))) invalidType(valueType, value);
+          return set.call(this, key, value);
+        };
+
+        if (iterable) for (var i = 0; i < iterable.length; i++) {
+          var pair = iterable[i];
+          instance.set(pair[0], pair[1]);
+        }
+        return instance;
+      };
+      structs.add(Class);
+      return Class;
+    };
+  };
+  var set = function set(valueType) {
+    return function () {
+      var Class = !SAFE ? Set : function GSet(iterable) {
+        var instance = new Set();
+        var add = instance.add;
+
+        instance.add = function (value) {
+          if (!is(_defineProperty({}, valueType, value))) invalidType(valueType, value);
+          return add.call(this, value);
+        };
+
+        if (iterable) for (var i = 0; i < iterable.length; i++) {
+          instance.add(iterable[i]);
+        }
+        return instance;
+      };
+      structs.add(Class);
+      return Class;
+    };
+  };
   var unsafe = function unsafe() {
     SAFE = false;
   }; // JSON Functions
@@ -769,6 +811,8 @@ self.deejs = (function (exports) {
   exports.enums = enums;
   exports.fn = fn;
   exports.is = is;
+  exports.map = map;
+  exports.set = set;
   exports.struct = struct;
   exports.union = union;
   exports.unsafe = unsafe;

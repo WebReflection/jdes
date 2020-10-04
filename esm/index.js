@@ -25,7 +25,7 @@ const {parse} = JSON;
 const {assign, create, defineProperty, freeze, is: same, prototype: OProto} = Object;
 const {getPrototypeOf, ownKeys} = Reflect;
 
-const {concat, every, filter, map, push, slice, splice} = AProto;
+const {concat, every, filter, map: arrayMap, push, slice, splice} = AProto;
 
 /* istanbul ignore next */
 const G = typeof self === 'object' ? self : global;
@@ -56,7 +56,7 @@ const invalidType = (T, V) => {
   const asArray = isArray(V);
   const INVALID_TYPE = `expected type ${asType(T)} but got ${[
     asArray ? 'array' : typeof(V),
-    asArray ? map.call(V, asString) : asString(V)
+    asArray ? arrayMap.call(V, asString) : asString(V)
   ].join(': ')}`;
   throw new TypeError(INVALID_TYPE);
 };
@@ -74,7 +74,7 @@ const patchArray = (array, type, _) => {
   if (SAFE) {
     patchMethod(array, type, 'concat', concat, _);
     patchMethod(array, type, 'filter', filter, _);
-    patchMethod(array, type, 'map', map, _);
+    patchMethod(array, type, 'map', arrayMap, _);
     patchMethod(array, type, 'slice', slice, _);
     defineProperty(array, 'push', {
       value(...values) {
@@ -183,7 +183,7 @@ export const define = (types, def) => {
             invalidType(array, this);
           if (SAFE && proxies.has(this))
             return this;
-          const result = isStruct ? map.call(this, _.cast, _) : this;
+          const result = isStruct ? arrayMap.call(this, _.cast, _) : this;
           return proxyArray(patchArray(result, array, _), type, _);
         }
       });
@@ -313,6 +313,46 @@ export const union = type => {
       return JdeS.get(types[i]).cast(value);
     }
   };
+};
+
+export const map = (keyType, valueType) => () => {
+  const Class = !SAFE ? Map : function GMap(iterable) {
+    const instance = new Map;
+    const {set} = instance;
+    instance.set = function (key, value) {
+      if (!is({[keyType]: key}))
+        invalidType(keyType, key);
+      if (!is({[valueType]: value}))
+        invalidType(valueType, value);
+      return set.call(this, key, value);
+    };
+    if (iterable)
+      for (let i = 0; i < iterable.length; i++) {
+        const pair = iterable[i];
+        instance.set(pair[0], pair[1]);
+      }
+    return instance;
+  };
+  structs.add(Class);
+  return Class;
+};
+
+export const set = valueType => () => {
+  const Class = !SAFE ? Set : function GSet(iterable) {
+    const instance = new Set;
+    const {add} = instance;
+    instance.add = function (value) {
+      if (!is({[valueType]: value}))
+        invalidType(valueType, value);
+      return add.call(this, value);
+    };
+    if (iterable)
+      for (let i = 0; i < iterable.length; i++)
+        instance.add(iterable[i]);
+    return instance;
+  };
+  structs.add(Class);
+  return Class;
 };
 
 export const unsafe = () => {

@@ -1,3 +1,4 @@
-define('RGB', enums({RED: 0}, {GREEN: 1}, {BLUE: 2}));
+import {define, map, set} from 'jdes';
 
-print(RGB.GREEN);
+define('KeyInts', map(string, [int]));
+define('Keys', set([string]));

@@ -82,6 +82,31 @@ const parse = code => {
               path.replaceWith(path.node.arguments[0].properties[0].value);
               break;
             }
+            case 'map': {
+              const types = [];
+              for (const argument of path.node.arguments) {
+                if (argument.type === 'Identifier')
+                  types.push(argument.name);
+                else {
+                  for (const element of argument.elements)
+                    types.push([element.name]);
+                }
+              }
+              path.replaceWith(genericExpression(JSON.stringify(types)));
+              break;
+            }
+            case 'set': {
+              const types = [];
+              const [argument] = path.node.arguments;
+              if (argument.type === 'Identifier')
+                types.push(argument.name);
+              else {
+                const [element] = argument.elements;
+                types.push([element.name]);
+              }
+              path.replaceWith(genericExpression(JSON.stringify(types)));
+              break;
+            }
             case 'struct': {
               const args = [];
               const constructor = [];

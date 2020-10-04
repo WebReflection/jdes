@@ -9,6 +9,8 @@ const objectExpression = o => bodyNode(`(${JSON.stringify(o)})`)[0].expression;
 
 const bodyNode = js => parser.parse(js, options).program.body;
 
+const globals = new Set;
+
 const options = {
   plugins: ['flow'],
   sourceType: 'unambiguous'
@@ -31,6 +33,7 @@ const statics = new Map([
 
 module.exports = {
   slice, genericExpression, objectExpression, bodyNode,
+  globals,
   options,
   parser,
   traverse,
@@ -54,6 +57,21 @@ module.exports = {
               const [args, expr] = path.node.arguments;
               if (expr.name === 'union')
                 path.parentPath.remove();
+              else if (expr.type === 'ArrayExpression') {
+                let first = '';
+                const constants = [];
+                for (const {value} of (args.type === 'StringLiteral' ? [args] : args.elements)) {
+                  if (!first) {
+                    first = value;
+                    const Class = expr.elements.length === 2 ? 'Map' : 'Set';
+                    globals.add(Class);
+                    constants.push(`const ${value}=${Class}`);
+                  }
+                  else
+                    constants.push(`${value}=${first}`);
+                }
+                path.parentPath.replaceWithMultiple(bodyNode(`${constants.join(',')}`));
+              }
               else {
                 let first = '';
                 const constants = [];
