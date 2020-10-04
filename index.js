@@ -232,6 +232,12 @@ self.deejs = (function (exports) {
     return String(type).replace(RESYMBOL, '[$1]');
   };
 
+  var getType = function getType(type) {
+    return isArray(type) ? type[0] : ownKeys(G).filter(function (k) {
+      return G[k] === type;
+    })[0];
+  };
+
   var inspect = function inspect(object) {
     var _ownKeys = ownKeys(object),
         _ownKeys2 = _slicedToArray(_ownKeys, 1),
@@ -375,10 +381,10 @@ self.deejs = (function (exports) {
 
             return asArray ? every.call(value, function (v) {
               return _this2.check(v, false);
-            }) : value instanceof def || isArray(value);
+            }) : (SAFE ? def.instances.has(value) : value instanceof def) || isArray(value);
           },
           cast: function cast(value) {
-            return value instanceof def ? value : new def(value);
+            return (SAFE ? def.instances.has(value) : value instanceof def) ? value : new def(value);
           }
         } : assign({}, def);
 
@@ -629,50 +635,54 @@ self.deejs = (function (exports) {
         return JdeS.get(types[i]).cast(value);
       }
     };
-  }; // TODO: guard against [type] vs type
-
+  };
   var map = function map(keyType, valueType) {
-    var asKeyArray = isArray(keyType);
-    var asValueArray = isArray(valueType);
-    var k = JdeS.get(asKeyArray ? keyType[0] : keyType);
-    var v = JdeS.get(asValueArray ? valueType[0] : valueType);
+    var keyCheck = getType(keyType);
+    var valueCheck = getType(valueType);
     var Class = !SAFE ? Map : function GMap(iterable) {
       var instance = new Map();
       var set = instance.set;
       defineProperty(instance, 'set', {
         value: function value(key, _value) {
-          if (!k.check(key, asKeyArray)) invalidType(keyType, key);
-          if (!v.check(_value, asValueArray)) invalidType(valueType, _value);
+          if (!is(_defineProperty({}, keyCheck, key))) invalidType(keyType, key);
+          if (!is(_defineProperty({}, valueCheck, _value))) invalidType(valueType, _value);
           return set.call(this, key, _value);
         }
       });
-      if (iterable) for (var i = 0; i < iterable.length; i++) {
+
+      for (var i = 0; i < iterable.length; i++) {
         var pair = iterable[i];
         instance.set(pair[0], pair[1]);
       }
+
+      Class.instances.set(instance, true);
       return instance;
     };
     mapOrSet.add(Class);
+    if (SAFE) Class.instances = new WeakMap();
     return Class;
   };
   var set = function set(valueType) {
-    var asValueArray = isArray(valueType);
-    var v = JdeS.get(asValueArray ? valueType[0] : valueType);
+    var valueCheck = getType(valueType);
     var Class = !SAFE ? Set : function GSet(iterable) {
       var instance = new Set();
       var add = instance.add;
       defineProperty(instance, 'add', {
         value: function value(_value2) {
-          if (!v.check(_value2, asValueArray)) invalidType(valueType, _value2);
+          if (!is(_defineProperty({}, valueCheck, _value2))) invalidType(valueType, _value2);
           return add.call(this, _value2);
         }
       });
-      if (iterable) for (var i = 0; i < iterable.length; i++) {
+
+      for (var i = 0; i < iterable.length; i++) {
         instance.add(iterable[i]);
       }
+
+      Class.instances.set(instance, true);
       return instance;
     };
     mapOrSet.add(Class);
+    if (SAFE) Class.instances = new WeakMap();
     return Class;
   };
   var unsafe = function unsafe() {

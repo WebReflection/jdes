@@ -20,11 +20,6 @@ define('Point3D', struct(
   }}}
 ));
 
-define('NSet', set(int));
-define('ANSet', set([int]));
-define('NMap', map(str, int));
-define('ANMap', map(str, [int]));
-
 console.time('safe');
 test(false);
 console.timeEnd('safe');
@@ -113,12 +108,63 @@ function test(unsafe) {
   const {[Point3D]: p3ds} = [p3d, {x: 3, y: 4, z: 5}];
   assert(Array.isArray(p3ds), 'unexpected Point3D as array');
 
-  // Set
-  const {NSet: ns} = [1];
-  assert(ns.size === 1 && ns.has(1), 'unexpected Set behavior');
+  // Map and Set
+  const NSetName = 'NSet' + unsafe;
+  const ANSetName = 'ANSet' + unsafe;
+  const NMapName = 'NMap' + unsafe;
+  define(NSetName, set(int));
+  define(ANSetName, set([int]));
+  define(NMapName, map(str, int));
 
-  const {NMap: nm} = [['one', 1]];
+  const {[NSetName]: ns} = [1];
+  assert(ns.size === 1 && ns.has(1), 'unexpected Set behavior');
+  ns.add(1);
+  ns.add(2);
+  assert([...ns].join(',') === '1,2', 'unexpected Set add behavior');
+  if (!unsafe) {
+    try {
+      ns.add('string');
+      assert(false, 'unexpected Set add behavior');
+    }
+    catch (o_O) {}
+  }
+  assert(is({[NSetName]: ns}), 'unexpected Set check');
+
+  const {[global[NSetName]]: mns} = [ns, [2]];
+  assert(mns.length === 2 && mns[0] === ns && mns[1] instanceof Set, 'unexpected Set instances');
+
+  const {[global[NSetName]]: emns} = [[]];
+  assert(emns.length === 1 && emns[0].size === 0, 'unexpected empty Set');
+
+  const an = [1];
+  const {[ANSetName]: ans} = [an];
+  assert(ans.has(an), 'unexpected array entry');
+  if (!unsafe) {
+    try {
+      ns.add(['string']);
+      assert(false, 'unexpected Set add behavior');
+    }
+    catch (o_O) {}
+  }
+
+  const {[NMapName]: nm} = [['one', 1]];
   assert(nm.size === 1 && nm.has('one') && nm.get('one') === 1, 'unexpected Map behavior');
+  if (!unsafe) {
+    try {
+      nm.set(1, 'one');
+      assert(false, 'unexpected Map set behavior');
+    }
+    catch (o_O) {}
+    try {
+      nm.set('one', '1');
+      assert(false, 'unexpected Map set behavior');
+    }
+    catch (o_O) {}
+  }
+  assert(is({[NMapName]: nm}), 'unexpected Map check');
+
+  const {[NSetName]: emptySet} = [];
+  const {[NMapName]: emptyMap} = [];
 }
 
 function testFailures() {

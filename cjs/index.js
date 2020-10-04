@@ -45,6 +45,9 @@ const defaultArg = new Proxy({}, {get: () => void 0});
 const asString = value => String(value).toString();
 const asType = type => String(type).replace(RESYMBOL, '[$1]');
 
+const getType = type => isArray(type) ?
+                  type[0] : ownKeys(G).filter(k => G[k] === type)[0];
+
 const inspect = object => {
   const [type] = ownKeys(object);
   const value = object[type];
@@ -167,10 +170,14 @@ const define = (types, def) => {
         check(value, asArray) {
           return asArray ?
                   every.call(value, v => this.check(v, false)) :
-                  (value instanceof def || isArray(value));
+                  ((SAFE ?
+                    def.instances.has(value) :
+                    value instanceof def
+                  ) || isArray(value));
         },
         cast(value) {
-          return value instanceof def ? value : new def(value);
+          return (SAFE ? def.instances.has(value) : value instanceof def) ?
+                  value : new def(value);
         }
       } : assign({}, def))
     );
@@ -336,51 +343,51 @@ const union = type => {
 };
 exports.union = union;
 
-// TODO: guard against [type] vs type
 const map = (keyType, valueType) => {
-  const asKeyArray = isArray(keyType);
-  const asValueArray = isArray(valueType);
-  const k = JdeS.get(asKeyArray ? keyType[0] : keyType);
-  const v = JdeS.get(asValueArray ? valueType[0] : valueType);
+  const keyCheck = getType(keyType);
+  const valueCheck = getType(valueType);
   const Class = !SAFE ? Map : function GMap(iterable) {
     const instance = new Map;
     const {set} = instance;
     defineProperty(instance, 'set', {value(key, value) {
-      if (!k.check(key, asKeyArray))
+      if (!is({[keyCheck]: key}))
         invalidType(keyType, key);
-      if (!v.check(value, asValueArray))
+      if (!is({[valueCheck]: value}))
         invalidType(valueType, value);
       return set.call(this, key, value);
     }});
-    if (iterable)
-      for (let i = 0; i < iterable.length; i++) {
-        const pair = iterable[i];
-        instance.set(pair[0], pair[1]);
-      }
+    for (let i = 0; i < iterable.length; i++) {
+      const pair = iterable[i];
+      instance.set(pair[0], pair[1]);
+    }
+    Class.instances.set(instance, true);
     return instance;
   };
   mapOrSet.add(Class);
+  if (SAFE)
+    Class.instances = new WeakMap;
   return Class;
 };
 exports.map = map;
 
 const set = valueType => {
-  const asValueArray = isArray(valueType);
-  const v = JdeS.get(asValueArray ? valueType[0] : valueType);
+  const valueCheck = getType(valueType);
   const Class = !SAFE ? Set : function GSet(iterable) {
     const instance = new Set;
     const {add} = instance;
     defineProperty(instance, 'add', {value(value) {
-      if (!v.check(value, asValueArray))
+      if (!is({[valueCheck]: value}))
         invalidType(valueType, value);
       return add.call(this, value);
     }});
-    if (iterable)
-      for (let i = 0; i < iterable.length; i++)
-        instance.add(iterable[i]);
+    for (let i = 0; i < iterable.length; i++)
+      instance.add(iterable[i]);
+    Class.instances.set(instance, true);
     return instance;
   };
   mapOrSet.add(Class);
+  if (SAFE)
+    Class.instances = new WeakMap;
   return Class;
 };
 exports.set = set;

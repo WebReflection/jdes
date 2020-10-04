@@ -208,6 +208,42 @@ As the `_` underscore is used to split/check types, it is a good idea to never d
 
 </details>
 
+<details id="api-map">
+  <summary><strong>map</strong></summary>
+
+The _map_ utility helps defining *Map* instances with a well known type for both keys or values.
+
+```js
+define('StrInt', map(str, int));
+
+// maps definition work via shortcut
+const {StrInt: si} = [];
+si.set('one', 1); // OK
+si.set(1, 'one'); // fails
+```
+
+When targeting compilable targets it is *mandatory* to define typed maps.
+
+</details>
+
+<details id="api-set">
+  <summary><strong>set</strong></summary>
+
+The _set_ utility helps defining *Set* instances with a well known type for values.
+
+```js
+define('Str', set(str));
+
+// maps definition work via shortcut
+const {Str: s} = [];
+s.add('one'); // OK
+s.add(1);     // fails
+```
+
+When targeting compilable targets it is *mandatory* to define typed sets.
+
+</details>
+
 <details id="api-unsafe">
   <summary><strong>unsafe()</strong></summary>
 
