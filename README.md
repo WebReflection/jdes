@@ -222,7 +222,17 @@ si.set('one', 1); // OK
 si.set(1, 'one'); // fails
 ```
 
-When targeting compilable targets it is *mandatory* to define typed maps.
+Please note, when targeting compilable targets it is *mandatory* to define typed maps, and *jdes* maps should not be iterated right away:
+
+```js
+// this breaks
+for (const [key, value] of si);
+
+// this works
+for (const [key, value] of si.entries());
+```
+
+This is due to the fact `for/of` loops in *jdes* are always transformed as regular array loops.
 
 </details>
 
@@ -240,7 +250,17 @@ s.add('one'); // OK
 s.add(1);     // fails
 ```
 
-When targeting compilable targets it is *mandatory* to define typed sets.
+Please note, when targeting compilable targets it is *mandatory* to define typed sets, and *jdes* sets should not be iterated right away:
+
+```js
+// this breaks
+for (const value of s);
+
+// this works
+for (const value of s.values());
+```
+
+This is due to the fact `for/of` loops in *jdes* are always transformed as regular array loops.
 
 </details>
 
