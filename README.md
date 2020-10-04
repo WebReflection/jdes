@@ -355,6 +355,7 @@ import {
   define,                   // used to define types
   as, is,                   // cast and check utils
   enums, fn, struct, union, // specialized types
+  set, map,                 // typed Set and Map
   unsafe                    // performance boost for production
 } from 'jdes';
 
