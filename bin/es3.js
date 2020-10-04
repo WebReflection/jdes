@@ -64,9 +64,9 @@ module.exports = code => {
     code = `// [ES3-Set-Polyfill
 function Set(I){this.clear();if(I){this._k=I.slice(0);this.size=I.length}}
 Set.prototype["delete"]=function(k){var _k=this._k,i=_k.indexOf(k),h=-1<i;if(h){_k.splice(i,1);this.size--;}return h};
-Set.prototype.add=function(k,v){var _k=this._k,i=_k.indexOf(k);if(-1<i)_k[i]=k;else{_k.push(k);this.size++}return this};
 Set.prototype.clear=function(){this._k=[];this.size = 0};
 Set.prototype.has=function(k){return -1<this._k.indexOf(k)};
+Set.prototype.add=function(k,v){var _k=this._k,i=_k.indexOf(k);if(-1<i)_k[i]=k;else{_k.push(k);this.size++}return this};
 Set.prototype.entries=function(){for(var _k=this._k,e=[],i=0;i<this.size;i++)e[i]=[_k[i],_k[i]];return e};
 Set.prototype.keys=function(){return this._k.slice(0)};
 Set.prototype.values=function(){return this._k.slice(0)};
@@ -80,6 +80,7 @@ ${code}`;
 function Map(I){this.clear();if(I){for(var i=0;i<I.length;i++){this._k.push(I[i][0]);this._v.push(I[i][1])}this.size=I.length}}
 Map.prototype["delete"]=function(k){var _k=this._k,i=_k.indexOf(k),h=-1<i;if(h){_k.splice(i,1);this._v.splice(i,1);this.size--}return h};
 Map.prototype.clear=function(){this._k=[];this._v=[];this.size=0};
+Map.prototype.has=function(k){return -1<this._k.indexOf(k)};
 Map.prototype.get=function(k){var i=this._k.indexOf(k);return -1<i?this._v[i]:void 0};
 Map.prototype.set=function(k,v){var _k=this._k,i=_k.indexOf(k),h=-1<i;this._v[h?i:(_k.push(k)-1)]=v;if(!h)this.size++;return this};
 Map.prototype.entries=function(){for(var e=[],i=0;i<this.size;i++)e[i]=[this._k[i],this._v[i]];return e};

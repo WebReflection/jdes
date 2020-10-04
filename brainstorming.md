@@ -43,7 +43,9 @@ To be able to target every possible env, these are major restrictions to what's 
 
 If the target is *JS*, but *not* the *ES3* version of it, any code that won't follow previous convention will still be valid, cleaned up, and work as expected.
 
-Most restrictions and definitions, in such case, will be mostly vaporware, but if the target is *ES3* you are in charge of providing all polyfills that are needed. See *es5 shims* good old library for that, but thi sproject doesn't grant stuff not meant to work out of the box will work.
+Most restrictions and definitions, in such case, will be mostly vaporware, but if the target is *ES3* you are in charge of providing all polyfills that are needed, except for *Set* and *Map*, which are automatically provided when needed.
+
+See [es5-shim](https://github.com/es-shims/es5-shim) good old library for other polyfills.
 
 ## As main program
 
