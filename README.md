@@ -1,6 +1,10 @@
 # Destructured JS
 
-[![Build Status](https://travis-ci.com/WebReflection/jdes.svg?branch=master)](https://travis-ci.com/WebReflection/jdes) [![Coverage Status](https://coveralls.io/repos/github/WebReflection/jdes/badge.svg?branch=master)](https://coveralls.io/github/WebReflection/jdes?branch=master)
+[![Coverage Status](https://coveralls.io/repos/github/WebReflection/jdes/badge.svg?branch=master)](https://coveralls.io/github/WebReflection/jdes?branch=master)
+
+- - -
+**Update** - there is a new "*toy*" in town that kinda fully replace anything I wanted to do in here 6+ years ago, it's called [Perry](https://perryts.com/), which is TypeScript based (not sure JS) but TS is kinda an industry standard at this point, way more mature than anything I could do in here and, on top of that, [AssemblyScript](https://www.assemblyscript.org/) also could somehow simulate or replace my original intent, yet it wasn't targeting native/binary code, so *Perry* it is if that's your goal.
+- - -
 
 A type safe JS runtime.
 
